@@ -38,7 +38,7 @@ function PopupContent() {
                         </button>
                     </Tooltip>
                 </div>
-                <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" />
+                <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" iconOnlyActions />
             </div>
         </div>
     )

@@ -2,15 +2,18 @@ import * as React from "react"
 import { useTodos } from "../hooks/useTodos"
 import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
+import { Plus, Trash2 } from "lucide-react"
 import { Checkbox } from "../components/ui/checkbox"
+import { Tooltip } from "../components/ui/tooltip"
 
 interface TodoListProps {
   selectedCategoryId: string
   hideCompleted?: boolean
   listLabel?: string
+  iconOnlyActions?: boolean
 }
 
-export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel }: TodoListProps) {
+export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel, iconOnlyActions = false }: TodoListProps) {
   const [title, setTitle] = React.useState("")
   const { data: todos = [], isLoading, add, toggle, remove } = useTodos(selectedCategoryId)
 
@@ -55,7 +58,14 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel 
           disabled={!title.trim() || add.isPending}
           className="px-4"
         >
-          {add.isPending ? "新增中..." : "新增"}
+          {add.isPending ? (
+            "新增中..."
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              新增
+            </span>
+          )}
         </Button>
       </div>
       {listLabel && (
@@ -69,7 +79,7 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel 
           {hideCompleted ? "目前沒有未完成的任務" : "目前沒有任務"}
         </div>
       ) : (
-  <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+        <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
           {visibleTodos.map((t) => (
             <li key={t.id} className="flex items-center gap-2 p-2 border rounded-md bg-card">
               <Checkbox
@@ -80,15 +90,29 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel 
               <span className={`flex-1 text-sm ${t.completed ? "line-through text-muted-foreground" : ""}`}>
                 {t.title}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => remove.mutate(t.id)}
-                disabled={remove.isPending}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                刪除
-              </Button>
+              {iconOnlyActions ? (
+                <Tooltip content="刪除">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => remove.mutate(t.id)}
+                    disabled={remove.isPending}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => remove.mutate(t.id)}
+                  disabled={remove.isPending}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  刪除
+                </Button>
+              )}
             </li>
           ))}
         </ul>
