@@ -6,9 +6,11 @@ import { Checkbox } from "../components/ui/checkbox"
 
 interface TodoListProps {
   selectedCategoryId: string
+  hideCompleted?: boolean
+  listLabel?: string
 }
 
-export function TodoList({ selectedCategoryId }: TodoListProps) {
+export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel }: TodoListProps) {
   const [title, setTitle] = React.useState("")
   const { data: todos = [], isLoading, add, toggle, remove } = useTodos(selectedCategoryId)
 
@@ -34,6 +36,10 @@ export function TodoList({ selectedCategoryId }: TodoListProps) {
     }
   }, [onAdd])
 
+  const visibleTodos = React.useMemo(() => {
+    return hideCompleted ? todos.filter((t) => !t.completed) : todos
+  }, [todos, hideCompleted])
+
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
@@ -52,16 +58,19 @@ export function TodoList({ selectedCategoryId }: TodoListProps) {
           {add.isPending ? "新增中..." : "新增"}
         </Button>
       </div>
+      {listLabel && (
+        <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
+      )}
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">載入中...</div>
-      ) : todos.length === 0 ? (
+      ) : visibleTodos.length === 0 ? (
         <div className="text-sm text-muted-foreground text-center py-4">
-          目前沒有任務
+          {hideCompleted ? "目前沒有未完成的任務" : "目前沒有任務"}
         </div>
       ) : (
-        <ul className="space-y-2 max-h-60 overflow-y-auto">
-          {todos.map((t) => (
+  <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {visibleTodos.map((t) => (
             <li key={t.id} className="flex items-center gap-2 p-2 border rounded-md bg-card">
               <Checkbox
                 checked={t.completed}

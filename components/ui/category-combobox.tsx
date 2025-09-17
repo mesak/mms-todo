@@ -46,7 +46,7 @@ export function CategoryCombobox({
         <Popover.Content sideOffset={8} className="z-50 w-[260px] rounded-md border bg-popover p-2 shadow-md outline-none">
           <Command className="bg-transparent">
             <Command.Input placeholder="搜尋類別..." className="w-full px-2 py-1 text-sm border border-input rounded bg-background" />
-            <div className="max-h-60 overflow-y-auto">
+            <div className="max-h-[50vh] overflow-y-auto">
               {categories.map((c) => (
                 <button
                   key={c.id}

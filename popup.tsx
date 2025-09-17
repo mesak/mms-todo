@@ -1,8 +1,9 @@
 import * as React from "react"
-import { Settings } from "lucide-react"
+import { PanelRightOpen } from "lucide-react"
 import { Providers } from "./providers"
 import "./styles/globals.css"
 import { TodoList } from "./ui/TodoList"
+import { Tooltip } from "./components/ui/tooltip"
 import { CategoryCombobox } from "./components/ui/category-combobox"
 import { useCategories } from "./hooks/useTodos"
 
@@ -28,15 +29,16 @@ function PopupContent() {
                         selectedCategoryId={selectedCategoryId}
                         onChange={setSelectedCategoryId}
                     />
-                    <button
-                        onClick={openSidePanel}
-                        className="p-2 hover:bg-accent rounded-md transition-colors text-foreground"
-                        title="開啟側邊面板"
-                    >
-                        <Settings className="h-4 w-4" />
-                    </button>
+                    <Tooltip content="開啟側邊面板">
+                        <button
+                            onClick={openSidePanel}
+                            className="p-2 hover:bg-accent rounded-md transition-colors text-foreground"
+                        >
+                            <PanelRightOpen className="h-4 w-4" />
+                        </button>
+                    </Tooltip>
                 </div>
-                <TodoList selectedCategoryId={selectedCategoryId} />
+                <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" />
             </div>
         </div>
     )

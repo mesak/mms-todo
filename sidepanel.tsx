@@ -1,14 +1,14 @@
 import * as React from "react"
-import { Plus, Edit2, Trash2, ListTodo, Folder, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Edit2, Trash2, ListTodo, Folder, PanelLeftOpen, PanelLeftClose } from "lucide-react"
 import { Providers } from "./providers"
 import "./styles/globals.css"
 import { Input } from "./components/ui/input"
 import { Button } from "./components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card"
 import { Separator } from "./components/ui/separator"
-import { useCategories } from "./hooks/useTodos"
+import { useCategories, useTodos } from "./hooks/useTodos"
 import type { Category } from "./types/todo"
 import { CategoryCombobox } from "./components/ui/category-combobox"
+import { Tooltip } from "./components/ui/tooltip"
 import { TodoList } from "./ui/TodoList"
 
 type View = "todos" | "categories"
@@ -19,6 +19,18 @@ function CategoriesManager() {
     const [editName, setEditName] = React.useState("")
 
     const { data: categories = [], isLoading, add, update, remove } = useCategories()
+    // Get all todos to compute per-category incomplete counts and support cascade delete
+    const { data: allTodos = [], remove: removeTodo } = useTodos()
+
+    const pendingCountByCategory = React.useMemo(() => {
+        const map = new Map<string, number>()
+        for (const t of allTodos) {
+            if (!t.completed) {
+                map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + 1)
+            }
+        }
+        return map
+    }, [allTodos])
 
     const onAddCategory = () => {
         if (!newCategoryName.trim()) return
@@ -49,123 +61,133 @@ function CategoriesManager() {
 
     const onDeleteCategory = (categoryId: string) => {
         if (categoryId === "work") return
+        const categoryTodos = allTodos.filter((t) => t.categoryId === categoryId)
+        const incompleteCount = pendingCountByCategory.get(categoryId) ?? 0
+        if (incompleteCount > 0) {
+            const ok = window.confirm(`此類別仍有 ${incompleteCount} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
+            if (!ok) return
+        }
         remove.mutate(categoryId, {
+            onSuccess: () => {
+                // Also remove all todos under this category to avoid orphaned items
+                categoryTodos.forEach((t) => removeTodo.mutate(t.id))
+            },
             onError: (error) => console.error("Delete category failed:", error)
         })
     }
 
     return (
-        <Card className="rounded-xl">
-            <CardHeader className="border-b border-border">
-                <CardTitle className="text-2xl">類別管理</CardTitle>
-                <CardDescription>管理您的任務類別</CardDescription>
-            </CardHeader>
-            <CardContent className="py-6 space-y-6">
-                {/* 新增類別 */}
-                <div className="space-y-4">
-                    <h2 className="text-base font-semibold text-foreground">新增類別</h2>
-                    <div className="flex gap-3">
-                        <Input
-                            placeholder="輸入類別名稱..."
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault()
-                                    onAddCategory()
-                                }
-                            }}
-                            className="flex-1 h-11"
-                        />
-                        <Button
-                            onClick={onAddCategory}
-                            size="default"
-                            disabled={!newCategoryName.trim() || add.isPending}
-                            className="px-6 h-11"
-                        >
-                            {add.isPending ? "新增中..." : <Plus className="h-4 w-4 mr-2" />}
-                            {!add.isPending && "新增"}
-                        </Button>
-                    </div>
+        <div className="space-y-4">
+            <div className="text-lg font-semibold">類別管理</div>
+            {/* 新增類別 */}
+            <div className="space-y-3">
+                <div className="text-sm font-medium text-foreground">新增類別</div>
+                <div className="flex gap-3">
+                    <Input
+                        placeholder="輸入類別名稱..."
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault()
+                                onAddCategory()
+                            }
+                        }}
+                        className="flex-1 h-11"
+                    />
+                    <Button
+                        onClick={onAddCategory}
+                        size="default"
+                        disabled={!newCategoryName.trim() || add.isPending}
+                        className="px-6 h-11"
+                    >
+                        {add.isPending ? "新增中..." : <Plus className="h-4 w-4 mr-2" />}
+                        {!add.isPending && "新增"}
+                    </Button>
                 </div>
+            </div>
 
-                <Separator className="my-2" />
+            <Separator />
 
-                {/* 類別列表 */}
-                <div className="space-y-4">
-                    <h2 className="text-base font-semibold text-foreground">類別列表</h2>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="text-sm text-muted-foreground">載入中...</div>
-                        </div>
-                    ) : categories.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/20">
-                            <div className="text-sm">目前沒有類別</div>
-                            <div className="text-xs mt-2">新增一個類別來開始使用</div>
-                        </div>
-                    ) : (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                            {categories.map((category) => (
-                                <div
-                                    key={category.id}
-                                    className="flex items-center gap-4 p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors shadow-sm"
-                                >
-                                    {editingCategory?.id === category.id ? (
-                                        <div className="flex-1 flex gap-3">
-                                            <Input
-                                                value={editName}
-                                                onChange={(e) => setEditName(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") {
-                                                        e.preventDefault()
-                                                        onSaveEdit()
-                                                    }
-                                                }}
-                                                className="flex-1 h-10"
-                                            />
-                                            <Button onClick={onSaveEdit} size="sm" variant="default" disabled={update.isPending} className="h-10 px-4">
-                                                {update.isPending ? "儲存中..." : "儲存"}
-                                            </Button>
-                                            <Button onClick={() => setEditingCategory(null)} size="sm" variant="outline" className="h-10 px-4">
-                                                取消
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <>
+            {/* 類別列表 */}
+            <div className="space-y-3">
+                <div className="text-sm font-medium text-foreground">類別列表</div>
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-sm text-muted-foreground">載入中...</div>
+                    </div>
+                ) : categories.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/20">
+                        <div className="text-sm">目前沒有類別</div>
+                        <div className="text-xs mt-2">新增一個類別來開始使用</div>
+                    </div>
+                ) : (
+                    <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+                        {categories.map((category) => (
+                            <div
+                                key={category.id}
+                                className="flex items-center gap-4 p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors shadow-sm"
+                            >
+                                {editingCategory?.id === category.id ? (
+                                    <div className="flex-1 flex gap-3">
+                                        <Input
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault()
+                                                    onSaveEdit()
+                                                }
+                                            }}
+                                            className="flex-1 h-10"
+                                        />
+                                        <Button onClick={onSaveEdit} size="sm" variant="default" disabled={update.isPending} className="h-10 px-4">
+                                            {update.isPending ? "儲存中..." : "儲存"}
+                                        </Button>
+                                        <Button onClick={() => setEditingCategory(null)} size="sm" variant="outline" className="h-10 px-4">
+                                            取消
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
                                             <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-foreground truncate">{category.name}</div>
+                                                <div className="font-medium text-foreground truncate flex items-center gap-2">
+                                                    <span className="truncate">{category.name}</span>
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                                                        未完成 {pendingCountByCategory.get(category.id) ?? 0}
+                                                    </span>
+                                                </div>
                                                 <div className="text-xs text-muted-foreground mt-1">
                                                     {new Date(category.createdAt).toLocaleDateString("zh-TW")}
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    onClick={() => onEditCategory(category)}
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 p-0 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    onClick={() => onDeleteCategory(category.id)}
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    disabled={category.id === "work" || remove.isPending}
-                                                    className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={() => onEditCategory(category)}
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-9 w-9 p-0 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                onClick={() => onDeleteCategory(category.id)}
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={category.id === "work" || remove.isPending}
+                                                className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     )
 }
 
@@ -199,15 +221,16 @@ function SidePanelShell() {
             <aside className={`border-r border-border transition-all duration-200 ${collapsed ? "w-14" : "w-56"} flex flex-col`}>
                 <div className="h-12 flex items-center justify-between px-2">
                     {!collapsed && <div className="px-2 text-sm font-semibold">MMS Todo</div>}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setCollapsed((c) => !c)}
-                        title={collapsed ? "展開" : "收合"}
-                        className="h-8 w-8 p-0"
-                    >
-                        {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                    </Button>
+                    <Tooltip content={collapsed ? "展開清單" : "收合清單"}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCollapsed((c) => !c)}
+                            className="h-8 w-8 p-0"
+                        >
+                            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        </Button>
+                    </Tooltip>
                 </div>
                 <Separator />
                 <nav className="flex-1 py-2">
@@ -230,7 +253,7 @@ function SidePanelShell() {
             </aside>
 
             {/* Content */}
-            <main className="flex-1 p-4">
+            <main className="flex-1 p-4 overflow-y-auto">
                 {view === "todos" ? (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -246,7 +269,7 @@ function SidePanelShell() {
                             />
                         </div>
                         <Separator />
-                        <TodoList selectedCategoryId={selectedCategoryId} />
+                        <TodoList selectedCategoryId={selectedCategoryId} listLabel="任務清單" />
                     </div>
                 ) : (
                     <div className="space-y-4">

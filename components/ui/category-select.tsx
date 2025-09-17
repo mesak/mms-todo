@@ -37,7 +37,7 @@ export function CategorySelect({
               className="w-full px-2 py-1 text-sm border border-input rounded bg-background"
             />
           </div>
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-[50vh] overflow-y-auto">
             {categories.map((category) => (
               <button
                 key={category.id}
