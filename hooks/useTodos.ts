@@ -1,121 +1,121 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { Todo, Category } from "../types/todo"
+import type { TodoTask, TodoList } from "../types/todo"
 
-const TODOS_STORAGE_KEY = "todos"
-const CATEGORIES_STORAGE_KEY = "categories"
+const TODO_TASKS_STORAGE_KEY = "todoTasks"
+const TODO_LISTS_STORAGE_KEY = "todoLists"
 
-async function getTodos(): Promise<Todo[]> {
+async function getTodoTasks(): Promise<TodoTask[]> {
   return new Promise((resolve) => {
-    chrome.storage.local.get([TODOS_STORAGE_KEY], (result) => {
-      resolve((result[TODOS_STORAGE_KEY] as Todo[]) ?? [])
+    chrome.storage.local.get([TODO_TASKS_STORAGE_KEY], (result) => {
+      resolve((result[TODO_TASKS_STORAGE_KEY] as TodoTask[]) ?? [])
     })
   })
 }
 
-async function setTodos(todos: Todo[]): Promise<void> {
+async function setTodoTasks(todoTasks: TodoTask[]): Promise<void> {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ [TODOS_STORAGE_KEY]: todos }, () => resolve())
+    chrome.storage.local.set({ [TODO_TASKS_STORAGE_KEY]: todoTasks }, () => resolve())
   })
 }
 
-async function getCategories(): Promise<Category[]> {
+async function getTodoLists(): Promise<TodoList[]> {
   return new Promise((resolve) => {
-    chrome.storage.local.get([CATEGORIES_STORAGE_KEY], (result) => {
-      const categories = (result[CATEGORIES_STORAGE_KEY] as Category[]) ?? []
-      // 如果沒有類別，創建預設的"工作"類別
-      if (categories.length === 0) {
-        const defaultCategory: Category = {
+    chrome.storage.local.get([TODO_LISTS_STORAGE_KEY], (result) => {
+      const todoLists = (result[TODO_LISTS_STORAGE_KEY] as TodoList[]) ?? []
+      // 如果沒有清單，創建預設的"工作"清單
+      if (todoLists.length === 0) {
+        const defaultTodoList: TodoList = {
           id: "work",
           name: "工作",
           createdAt: Date.now()
         }
-        setCategories([defaultCategory])
-        resolve([defaultCategory])
+        setTodoLists([defaultTodoList])
+        resolve([defaultTodoList])
       } else {
-        resolve(categories)
+        resolve(todoLists)
       }
     })
   })
 }
 
-async function setCategories(categories: Category[]): Promise<void> {
+async function setTodoLists(todoLists: TodoList[]): Promise<void> {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ [CATEGORIES_STORAGE_KEY]: categories }, () => resolve())
+    chrome.storage.local.set({ [TODO_LISTS_STORAGE_KEY]: todoLists }, () => resolve())
   })
 }
 
-export function useTodos(selectedCategoryId?: string) {
+export function useTodoTasks(selectedTodoListId?: string) {
   const queryClient = useQueryClient()
   const query = useQuery({
-    queryKey: ["todos", selectedCategoryId],
+    queryKey: ["todoTasks", selectedTodoListId],
     queryFn: async () => {
-      const todos = await getTodos()
-      if (selectedCategoryId) {
-        return todos.filter(todo => todo.categoryId === selectedCategoryId)
+      const todoTasks = await getTodoTasks()
+      if (selectedTodoListId) {
+        return todoTasks.filter(todoTask => todoTask.todoListId === selectedTodoListId)
       }
-      return todos
+      return todoTasks
     }
   })
 
   const add = useMutation({
-    mutationFn: async ({ title, categoryId }: { title: string; categoryId: string }) => {
-      const current = await getTodos()
-      const next: Todo[] = [
+    mutationFn: async ({ title, todoListId }: { title: string; todoListId: string }) => {
+      const current = await getTodoTasks()
+      const next: TodoTask[] = [
         {
           id: crypto.randomUUID(),
           title,
           completed: false,
-          categoryId,
+          todoListId,
           createdAt: Date.now()
         },
         ...current
       ]
-      await setTodos(next)
-      return { todos: next, categoryId }
+      await setTodoTasks(next)
+      return { todoTasks: next, todoListId }
     },
     onSuccess: () => {
       // 強制重新獲取所有相關的查詢
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
+      queryClient.invalidateQueries({ queryKey: ["todoTasks"] })
     }
   })
 
   const toggle = useMutation({
     mutationFn: async (id: string) => {
-      const current = await getTodos()
+      const current = await getTodoTasks()
       const next = current.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-      await setTodos(next)
-      return { todos: next, id }
+      await setTodoTasks(next)
+      return { todoTasks: next, id }
     },
     onSuccess: () => {
       // 強制重新獲取所有相關的查詢
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
+      queryClient.invalidateQueries({ queryKey: ["todoTasks"] })
     }
   })
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const current = await getTodos()
+      const current = await getTodoTasks()
       const next = current.filter((t) => t.id !== id)
-      await setTodos(next)
-      return { todos: next, id }
+      await setTodoTasks(next)
+      return { todoTasks: next, id }
     },
     onSuccess: () => {
       // 強制重新獲取所有相關的查詢
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
+      queryClient.invalidateQueries({ queryKey: ["todoTasks"] })
     }
   })
 
   return { ...query, add, toggle, remove }
 }
 
-export function useCategories() {
+export function useTodoLists() {
   const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: ["categories"], queryFn: getCategories })
+  const query = useQuery({ queryKey: ["todoLists"], queryFn: getTodoLists })
 
   const add = useMutation({
     mutationFn: async (name: string) => {
-      const current = await getCategories()
-      const next: Category[] = [
+      const current = await getTodoLists()
+      const next: TodoList[] = [
         ...current,
         {
           id: crypto.randomUUID(),
@@ -123,40 +123,40 @@ export function useCategories() {
           createdAt: Date.now()
         }
       ]
-      await setCategories(next)
+      await setTodoLists(next)
       return next
     },
     onSuccess: () => {
-      // 強制重新獲取類別查詢
-      queryClient.invalidateQueries({ queryKey: ["categories"] })
+      // 強制重新獲取清單查詢
+      queryClient.invalidateQueries({ queryKey: ["todoLists"] })
     }
   })
 
   const update = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const current = await getCategories()
+      const current = await getTodoLists()
       const next = current.map((c) => (c.id === id ? { ...c, name } : c))
-      await setCategories(next)
+      await setTodoLists(next)
       return next
     },
     onSuccess: () => {
-      // 強制重新獲取類別查詢
-      queryClient.invalidateQueries({ queryKey: ["categories"] })
+      // 強制重新獲取清單查詢
+      queryClient.invalidateQueries({ queryKey: ["todoLists"] })
     }
   })
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const current = await getCategories()
-      // 不允許刪除預設的"工作"類別
+      const current = await getTodoLists()
+      // 不允許刪除預設的"工作"清單
       if (id === "work") return current
       const next = current.filter((c) => c.id !== id)
-      await setCategories(next)
+      await setTodoLists(next)
       return next
     },
     onSuccess: () => {
-      // 強制重新獲取類別查詢
-      queryClient.invalidateQueries({ queryKey: ["categories"] })
+      // 強制重新獲取清單查詢
+      queryClient.invalidateQueries({ queryKey: ["todoLists"] })
     }
   })
 

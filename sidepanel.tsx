@@ -2,7 +2,7 @@ import * as React from "react"
 import "./styles/globals.css"
 import { Providers } from "./providers"
 import { Separator } from "./components/ui/separator"
-import { useCategories, useTodos } from "./hooks/useTodos"
+import { useTodoLists, useTodoTasks } from "./hooks/useTodos"
 import { AppSidebar } from "./components/sidepanel/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "./components/ui/sidebar"
 import { TodoList } from "./ui/TodoList"
@@ -18,19 +18,19 @@ export default function IndexSidePanel() {
 }
 
 function SidePanelShell() {
-    const { data: categories = [], isLoading } = useCategories()
-    const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>("work")
+    const { data: todoLists = [], isLoading } = useTodoLists()
+    const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
 
-    // Ensure a valid selected category when categories load or change
+    // Ensure a valid selected todo list when lists load or change
     React.useEffect(() => {
         if (isLoading) return
-        if (categories.length === 0) return
-        const exists = categories.some((c) => c.id === selectedCategoryId)
+        if (todoLists.length === 0) return
+        const exists = todoLists.some((l) => l.id === selectedTodoListId)
         if (!exists) {
-            setSelectedCategoryId(categories[0].id)
+            setSelectedTodoListId(todoLists[0].id)
         }
-    }, [categories, isLoading, selectedCategoryId])
+    }, [todoLists, isLoading, selectedTodoListId])
 
     return (
         <div className="fixed inset-0 w-screen h-screen bg-background text-foreground overflow-hidden flex flex-col">
@@ -60,7 +60,7 @@ function SidePanelShell() {
                         </div>
                         <Separator />
                         <div className="flex-1">
-                            <TodoList selectedCategoryId={selectedCategoryId} listLabel="任務清單" maxHeight="calc(100vh - 200px)" />
+                            <TodoList selectedTodoListId={selectedTodoListId} listLabel="任務清單" maxHeight="calc(100vh - 200px)" />
                         </div>
                     </div>
                 </main>
@@ -89,9 +89,9 @@ function SidePanelShell() {
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
                                     <AppSidebar 
-                                        categories={categories} 
-                                        selectedCategoryId={selectedCategoryId} 
-                                        onSelectCategory={setSelectedCategoryId}
+                                        todoLists={todoLists} 
+                                        selectedTodoListId={selectedTodoListId} 
+                                        onSelectTodoList={setSelectedTodoListId}
                                         isOverlay={true}
                                     />
                                 </div>

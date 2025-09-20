@@ -1,24 +1,24 @@
 import * as React from "react"
-import { useTodos } from "../hooks/useTodos"
+import { useTodoTasks } from "../hooks/useTodos"
 import { ExpandableInput } from "../components/ui/expandable-input"
 import { Button } from "../components/ui/button"
 import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText } from "lucide-react"
 import { Checkbox } from "../components/ui/checkbox"
 import { Tooltip } from "../components/ui/tooltip"
 
-interface TodoListProps {
-  selectedCategoryId: string
+interface TodoTaskListProps {
+  selectedTodoListId: string
   hideCompleted?: boolean
   listLabel?: string
   iconOnlyActions?: boolean
   maxHeight?: string
 }
 
-export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "60vh" }: TodoListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "60vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
-  const { data: todos = [], isLoading, add, toggle, remove } = useTodos(selectedCategoryId)
+  const { data: todoTasks = [], isLoading, add, toggle, remove } = useTodoTasks(selectedTodoListId)
 
   // 檢查是否為多行內容
   const isMultiline = React.useCallback((text: string) => {
@@ -44,9 +44,9 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
     })
   }, [])
 
-  const visibleTodos = React.useMemo(() => {
-    return hideCompleted ? todos.filter((t) => !t.completed) : todos
-  }, [todos, hideCompleted])
+  const visibleTodoTasks = React.useMemo(() => {
+    return hideCompleted ? todoTasks.filter((t) => !t.completed) : todoTasks
+  }, [todoTasks, hideCompleted])
 
   // 全部展開/摺疊
   const toggleGlobalExpansion = React.useCallback(() => {
@@ -55,7 +55,7 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
     
     if (newGlobalExpanded) {
       // 展開所有多行項目
-      const multilineIds = visibleTodos
+      const multilineIds = visibleTodoTasks
         .filter(t => isMultiline(t.title))
         .map(t => t.id)
       setExpandedItems(new Set(multilineIds))
@@ -63,12 +63,12 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
       // 摺疊所有項目
       setExpandedItems(new Set())
     }
-  }, [globalExpanded, visibleTodos, isMultiline])
+  }, [globalExpanded, visibleTodoTasks, isMultiline])
 
   const onAdd = React.useCallback(() => {
     if (!title.trim()) return
     add.mutate(
-      { title: title.trim(), categoryId: selectedCategoryId },
+      { title: title.trim(), todoListId: selectedTodoListId },
       {
         onSuccess: () => {
           setTitle("")
@@ -78,7 +78,7 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
         }
       }
     )
-  }, [title, selectedCategoryId, add])
+  }, [title, selectedTodoListId, add])
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -105,7 +105,7 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
       {listLabel && (
         <div className="flex items-center justify-between">
           <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
-          {visibleTodos.some(t => isMultiline(t.title)) && (
+          {visibleTodoTasks.some(t => isMultiline(t.title)) && (
             <Tooltip content={globalExpanded ? "全部摺疊" : "全部展開"}>
               <Button
                 variant="ghost"
@@ -122,13 +122,13 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">載入中...</div>
-      ) : visibleTodos.length === 0 ? (
+      ) : visibleTodoTasks.length === 0 ? (
         <div className="text-sm text-muted-foreground text-center py-4">
           {hideCompleted ? "目前沒有未完成的任務" : "目前沒有任務"}
         </div>
       ) : (
         <ul className="space-y-2 overflow-y-auto w-full max-w-full" style={{ maxHeight }}>
-          {visibleTodos.map((t) => {
+          {visibleTodoTasks.map((t) => {
             const isMultilineTodo = isMultiline(t.title)
             const isExpanded = expandedItems.has(t.id)
             const displayText = isMultilineTodo && !isExpanded ? getFirstLine(t.title) : t.title

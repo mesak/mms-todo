@@ -16,30 +16,30 @@ import {
     SidebarMenuSubButton,
     useSidebar
 } from "../ui/sidebar"
-import type { Category } from "../../types/todo"
+import type { TodoList } from "../../types/todo"
 import { cn } from "../../lib/utils"
+import { useTodoLists, useTodoTasks } from "../../hooks/useTodos"
 import { Button } from "../ui/button"
 import { Tooltip } from "../ui/tooltip"
-import { useCategories, useTodos } from "../../hooks/useTodos"
 
-export type NavKey = "todos" | "categories"
+export type NavKey = "todoTasks" | "todoLists"
 
 type AppSidebarProps = {
-    categories: Category[]
-    selectedCategoryId: string
-    onSelectCategory: (id: string) => void
+    todoLists: TodoList[]
+    selectedTodoListId: string
+    onSelectTodoList: (id: string) => void
     isOverlay?: boolean
 }
 
-export function AppSidebar({ categories, selectedCategoryId, onSelectCategory, isOverlay = false }: AppSidebarProps) {
+export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, isOverlay = false }: AppSidebarProps) {
     if (isOverlay) {
         return (
             <div className="h-full">
                 <div className="p-4">
                     <NavMainOverlay
-                        categories={categories}
-                        selectedCategoryId={selectedCategoryId}
-                        onSelectCategory={onSelectCategory}
+                        todoLists={todoLists}
+                        selectedTodoListId={selectedTodoListId}
+                        onSelectTodoList={onSelectTodoList}
                     />
                 </div>
             </div>
@@ -56,9 +56,9 @@ export function AppSidebar({ categories, selectedCategoryId, onSelectCategory, i
             </SidebarHeader>
             <SidebarContent>
                 <NavMain
-                    categories={categories}
-                    selectedCategoryId={selectedCategoryId}
-                    onSelectCategory={onSelectCategory}
+                    todoLists={todoLists}
+                    selectedTodoListId={selectedTodoListId}
+                    onSelectTodoList={onSelectTodoList}
                 />
             </SidebarContent>
             <SidebarFooter>v1.0</SidebarFooter>
@@ -67,24 +67,24 @@ export function AppSidebar({ categories, selectedCategoryId, onSelectCategory, i
     )
 }
 
-function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { categories: Category[]; selectedCategoryId: string; onSelectCategory: (id: string) => void }) {
-    const { add, update, remove } = useCategories()
-    const { data: allTodos = [], remove: removeTodo } = useTodos()
+function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
+    const { add, update, remove } = useTodoLists()
+    const { data: allTodoTasks = [], remove: removeTodoTask } = useTodoTasks()
 
     const [adding, setAdding] = React.useState(false)
     const [newName, setNewName] = React.useState("")
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByCategory = React.useMemo(() => {
+    const pendingCountByTodoList = React.useMemo(() => {
         const map = new Map<string, number>()
-        for (const t of allTodos) {
+        for (const t of allTodoTasks) {
             if (!t.completed) {
-                map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + 1)
+                map.set(t.todoListId, (map.get(t.todoListId) ?? 0) + 1)
             }
         }
         return map
-    }, [allTodos])
+    }, [allTodoTasks])
 
     const handleAdd = () => {
         if (!newName.trim()) return
@@ -96,7 +96,7 @@ function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { 
         })
     }
 
-    const startEdit = (c: Category) => {
+    const startEdit = (c: TodoList) => {
         setEditingId(c.id)
         setEditName(c.name)
     }
@@ -113,19 +113,19 @@ function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { 
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByCategory.get(id) ?? 0
+        const incomplete = pendingCountByTodoList.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
         }
-        const todosInCat = allTodos.filter(t => t.categoryId === id)
+        const todosInCat = allTodoTasks.filter(t => t.todoListId === id)
         remove.mutate(id, {
             onSuccess: () => {
-                todosInCat.forEach(t => removeTodo.mutate(t.id))
+                todosInCat.forEach(t => removeTodoTask.mutate(t.id))
                 // 若刪除的是目前選取的類別，嘗試切到第一個類別
-                if (selectedCategoryId === id && categories.length > 0) {
-                    const next = categories.find(c => c.id !== id)
-                    if (next) onSelectCategory(next.id)
+                if (selectedTodoListId === id && todoLists.length > 0) {
+                    const next = todoLists.find(c => c.id !== id)
+                    if (next) onSelectTodoList(next.id)
                 }
             }
         })
@@ -177,7 +177,7 @@ function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { 
                         </div>
                     )}
 
-                    {categories.map((c) => (
+                    {todoLists.map((c) => (
                         <div key={c.id} className="px-3">
                             {editingId === c.id ? (
                                 <div className="flex items-center gap-2">
@@ -201,13 +201,13 @@ function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { 
                                         variant="ghost"
                                         className={cn(
                                             "flex-1 justify-start h-8 px-2",
-                                            selectedCategoryId === c.id && "bg-accent text-accent-foreground"
+                                            selectedTodoListId === c.id && "bg-accent text-accent-foreground"
                                         )}
-                                        onClick={() => onSelectCategory(c.id)}
+                                        onClick={() => onSelectTodoList(c.id)}
                                     >
                                         <span className="truncate">{c.name}</span>
                                         <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                            {pendingCountByCategory.get(c.id) ?? 0}
+                                            {pendingCountByTodoList.get(c.id) ?? 0}
                                         </span>
                                     </Button>
                                     <div className="flex items-center gap-1">
@@ -238,21 +238,21 @@ function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { 
     )
 }
 
-function NavMain({ categories, selectedCategoryId, onSelectCategory }: { categories: Category[]; selectedCategoryId: string; onSelectCategory: (id: string) => void }) {
+function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
     const { collapsed } = useSidebar()
-    const { add, update, remove } = useCategories()
-    const { data: allTodos = [], remove: removeTodo } = useTodos()
+    const { add, update, remove } = useTodoLists()
+    const { data: allTodos = [], remove: removeTodo } = useTodoTasks()
 
     const [adding, setAdding] = React.useState(false)
     const [newName, setNewName] = React.useState("")
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByCategory = React.useMemo(() => {
+    const pendingCountByTodoList = React.useMemo(() => {
         const map = new Map<string, number>()
         for (const t of allTodos) {
             if (!t.completed) {
-                map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + 1)
+                map.set(t.todoListId, (map.get(t.todoListId) ?? 0) + 1)
             }
         }
         return map
@@ -268,7 +268,7 @@ function NavMain({ categories, selectedCategoryId, onSelectCategory }: { categor
         })
     }
 
-    const startEdit = (c: Category) => {
+    const startEdit = (c: TodoList) => {
         setEditingId(c.id)
         setEditName(c.name)
     }
@@ -285,19 +285,19 @@ function NavMain({ categories, selectedCategoryId, onSelectCategory }: { categor
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByCategory.get(id) ?? 0
+        const incomplete = pendingCountByTodoList.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
         }
-        const todosInCat = allTodos.filter(t => t.categoryId === id)
+        const todosInCat = allTodos.filter(t => t.todoListId === id)
         remove.mutate(id, {
             onSuccess: () => {
                 todosInCat.forEach(t => removeTodo.mutate(t.id))
                 // 若刪除的是目前選取的類別，嘗試切到第一個類別
-                if (selectedCategoryId === id && categories.length > 0) {
-                    const next = categories.find(c => c.id !== id)
-                    if (next) onSelectCategory(next.id)
+                if (selectedTodoListId === id && todoLists.length > 0) {
+                    const next = todoLists.find(c => c.id !== id)
+                    if (next) onSelectTodoList(next.id)
                 }
             }
         })
@@ -356,7 +356,7 @@ function NavMain({ categories, selectedCategoryId, onSelectCategory }: { categor
                             </div>
                         </SidebarMenuItem>
                     )}
-                    {categories.map((c) => (
+                    {todoLists.map((c) => (
                         <SidebarMenuItem key={c.id}>
                             {editingId === c.id && !collapsed ? (
                                 <div className="flex items-center gap-2 px-1">
@@ -378,13 +378,13 @@ function NavMain({ categories, selectedCategoryId, onSelectCategory }: { categor
                                 <div className="flex items-center gap-2">
                                     <SidebarMenuButton
                                         tooltip={c.name}
-                                        className={cn("flex-1", selectedCategoryId === c.id && "bg-accent/60 text-accent-foreground")}
-                                        onClick={() => onSelectCategory(c.id)}
+                                        className={cn("flex-1", selectedTodoListId === c.id && "bg-accent/60 text-accent-foreground")}
+                                        onClick={() => onSelectTodoList(c.id)}
                                     >
                                         <span className={cn("truncate", collapsed && "hidden")}>{c.name}</span>
                                         {!collapsed && (
                                             <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                                {pendingCountByCategory.get(c.id) ?? 0}
+                                                {pendingCountByTodoList.get(c.id) ?? 0}
                                             </span>
                                         )}
                                     </SidebarMenuButton>

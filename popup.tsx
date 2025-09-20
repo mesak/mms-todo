@@ -4,12 +4,12 @@ import { Providers } from "./providers"
 import "./styles/globals.css"
 import { TodoList } from "./ui/TodoList"
 import { Tooltip } from "./components/ui/tooltip"
-import { CategoryCombobox } from "./components/ui/category-combobox"
-import { useCategories } from "./hooks/useTodos"
+import { TodoListCombobox } from "./components/ui/todolist-combobox"
+import { useTodoLists } from "./hooks/useTodos"
 
 function PopupContent() {
-    const [selectedCategoryId, setSelectedCategoryId] = React.useState("work")
-    const { data: categories = [] } = useCategories()
+    const [selectedTodoListId, setSelectedTodoListId] = React.useState("work")
+    const { data: todoLists = [] } = useTodoLists()
 
     const openSidePanel = () => {
         // 使用更簡單的方式開啟側邊面板
@@ -25,10 +25,10 @@ function PopupContent() {
             <div className="p-3 space-y-3 w-full max-w-full box-border">
                 <div className="flex items-center justify-between gap-2 w-full max-w-full">
                     <div className="flex-1 min-w-0">
-                        <CategoryCombobox
-                            categories={categories}
-                            selectedCategoryId={selectedCategoryId}
-                            onChange={setSelectedCategoryId}
+                        <TodoListCombobox
+                            todoLists={todoLists}
+                            selectedTodoListId={selectedTodoListId}
+                            onChange={setSelectedTodoListId}
                         />
                     </div>
                     <Tooltip content="開啟側邊面板">
@@ -41,7 +41,7 @@ function PopupContent() {
                     </Tooltip>
                 </div>
                 <div className="w-full max-w-full overflow-hidden">
-                    <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" iconOnlyActions />
+                    <TodoList selectedTodoListId={selectedTodoListId} hideCompleted listLabel="未完成任務" iconOnlyActions />
                 </div>
             </div>
         </div>

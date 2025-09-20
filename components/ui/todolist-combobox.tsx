@@ -3,27 +3,27 @@ import * as Popover from "@radix-ui/react-popover"
 import { Command } from "cmdk"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { cn } from "../../lib/utils"
-import type { Category } from "../../types/todo"
+import type { TodoList } from "../../types/todo"
 
-interface CategoryComboboxProps {
-  categories: Category[]
-  selectedCategoryId?: string
-  onChange: (categoryId: string) => void
+interface TodoListComboboxProps {
+  todoLists: TodoList[]
+  selectedTodoListId?: string
+  onChange: (todoListId: string) => void
   placeholder?: string
   className?: string
   size?: "default" | "sm"
 }
 
-export function CategoryCombobox({
-  categories,
-  selectedCategoryId,
+export function TodoListCombobox({
+  todoLists,
+  selectedTodoListId,
   onChange,
-  placeholder = "選擇類別...",
+  placeholder = "選擇清單...",
   className,
   size = "default"
-}: CategoryComboboxProps) {
+}: TodoListComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const selected = categories.find((c) => c.id === selectedCategoryId)
+  const selected = todoLists.find((t) => t.id === selectedTodoListId)
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -45,19 +45,19 @@ export function CategoryCombobox({
       <Popover.Portal>
         <Popover.Content sideOffset={8} className="z-50 w-[260px] rounded-md border bg-popover p-2 shadow-md outline-none">
           <Command className="bg-transparent">
-            <Command.Input placeholder="搜尋類別..." className="w-full px-2 py-1 text-sm border border-input rounded bg-background" />
+            <Command.Input placeholder="搜尋清單..." className="w-full px-2 py-1 text-sm border border-input rounded bg-background" />
             <div className="max-h-[50vh] overflow-y-auto">
-              {categories.map((c) => (
+              {todoLists.map((t) => (
                 <button
-                  key={c.id}
+                  key={t.id}
                   onClick={() => {
-                    onChange(c.id)
+                    onChange(t.id)
                     setOpen(false)
                   }}
                   className="flex items-center w-full px-2 py-1 text-sm hover:bg-accent rounded transition-colors"
                 >
-                  <Check className={cn("mr-2 h-4 w-4", selectedCategoryId === c.id ? "opacity-100" : "opacity-0")} />
-                  {c.name}
+                  <Check className={cn("mr-2 h-4 w-4", selectedTodoListId === t.id ? "opacity-100" : "opacity-0")} />
+                  {t.name}
                 </button>
               ))}
             </div>
