@@ -13,6 +13,7 @@ export interface ExpandableInputProps {
 export const ExpandableInput = React.forwardRef<HTMLTextAreaElement, ExpandableInputProps>(
   ({ placeholder, value, onChange, onKeyDown, className, disabled, ...props }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+    const [isFocused, setIsFocused] = React.useState(false)
     
     // 合併 ref
     React.useImperativeHandle(ref, () => textareaRef.current!, [])
@@ -32,6 +33,14 @@ export const ExpandableInput = React.forwardRef<HTMLTextAreaElement, ExpandableI
     const handleChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       onChange(e.target.value)
     }, [onChange])
+
+    const handleFocus = React.useCallback(() => {
+      setIsFocused(true)
+    }, [])
+
+    const handleBlur = React.useCallback(() => {
+      setIsFocused(false)
+    }, [])
 
     // 自動調整高度
     React.useEffect(() => {
@@ -54,28 +63,41 @@ export const ExpandableInput = React.forwardRef<HTMLTextAreaElement, ExpandableI
     }, [value])
 
     const baseClassName = cn(
-      "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all duration-200 resize-none overflow-hidden",
-      "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "flex w-full rounded-md border-2 bg-background px-3 py-2 text-sm shadow-sm transition-all duration-300 resize-none overflow-hidden relative z-10",
+      "placeholder:text-muted-foreground focus:outline-none",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "leading-relaxed box-border max-w-full",
+      isFocused || value 
+        ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
+        : "border-input hover:border-blue-300",
       className
     )
 
     return (
-      <div className="relative group w-full max-w-full overflow-hidden">
+      <div className="relative group w-full max-w-full">
+        {/* 霓虹光效背景 */}
+        <div className={cn(
+          "absolute inset-0 rounded-md transition-opacity duration-300 -z-10",
+          isFocused || value 
+            ? "opacity-100 bg-gradient-to-r from-blue-500/10 via-blue-400/10 to-blue-600/10 blur-sm" 
+            : "opacity-0"
+        )}></div>
+        
         <textarea
           ref={textareaRef}
           placeholder={placeholder}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           disabled={disabled}
           className={baseClassName}
           rows={1}
           style={{ minHeight: '40px', maxHeight: '200px' }}
           {...props}
         />
-        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-10 bg-background/80 px-1 rounded">
+        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-20 bg-background/80 px-1 rounded">
           Shift+Enter 換行
         </div>
       </div>
