@@ -134,7 +134,7 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
             const displayText = isMultilineTodo && !isExpanded ? getFirstLine(t.title) : t.title
 
             return (
-              <li key={t.id} className="flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden">
+              <li key={t.id} className="group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent transition-all duration-200">
                 <Checkbox
                   checked={t.completed}
                   onCheckedChange={() => toggle.mutate(t.id)}
@@ -165,27 +165,33 @@ export function TodoList({ selectedCategoryId, hideCompleted = false, listLabel,
                   )}
                 </div>
                 {iconOnlyActions ? (
-                  <Tooltip content="刪除">
+                  // POPUP 模式：hover 時顯示刪除按鈕
+                  <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0">
+                    <Tooltip content="刪除任務">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => remove.mutate(t.id)}
+                        disabled={remove.isPending}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </Tooltip>
+                  </div>
+                ) : (
+                  // SIDEPANEL 模式：一直顯示圖標按鈕
+                  <Tooltip content="刪除任務">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => remove.mutate(t.id)}
                       disabled={remove.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 shrink-0"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </Tooltip>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => remove.mutate(t.id)}
-                    disabled={remove.isPending}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  >
-                    刪除
-                  </Button>
                 )}
               </li>
             )
