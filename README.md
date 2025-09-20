@@ -27,15 +27,27 @@ pnpm dev
 ```
 
 3) 在 Chrome 載入擴充功能（開發版）
-- 打開 chrome://extensions
-- 啟用「開發人員模式」
-- 以「載入未封裝項目」選擇資料夾：`build/chrome-mv3-dev`
 
 4) 開發中可直接修改以下檔案，Plasmo 會自動重建：
-- `popup.tsx`（彈出視窗）
-- `sidepanel.tsx`（側邊面板）
-- `options.tsx`（設定頁）
 
+
+## Motion Effects
+
+This project uses Framer Motion to provide smooth UI animations:
+
+- Todo items animate on add/remove (fade/slide + layout)
+- Completion toggle adds a subtle scale and strike-through transition
+- Side panel overlay fades in; panel slides in/out from the right
+
+Where implemented:
+
+- `ui/TodoList.tsx`: uses `AnimatePresence` and `motion.li` for list items
+- `sidepanel.tsx`: uses `AnimatePresence` and `motion.div` for overlay and panel
+
+Tuning or disabling:
+
+- To adjust stiffness/damping, edit the `transition` props in the files above
+- To disable animations, replace `motion.*` with their base elements and remove `AnimatePresence`
 ## 建置與封裝
 
 - 建置生產版：
