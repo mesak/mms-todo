@@ -21,7 +21,7 @@ function PopupContent() {
     }
 
     return (
-        <div className="w-[360px] min-h-[420px] max-w-[360px] bg-background text-foreground border-none shadow-none overflow-hidden">
+        <div className="w-[360px] min-h-[500px] max-w-[360px] bg-background text-foreground border-none shadow-none overflow-hidden">
             <div className="p-3 space-y-3 w-full max-w-full box-border">
                 <div className="flex items-center justify-between gap-2 w-full max-w-full">
                     <div className="flex-1 min-w-0">
