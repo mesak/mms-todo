@@ -17,6 +17,37 @@
   }
 }
 
+/* Global scrollbar styling (WebKit) */
+/* Keep it subtle and consistent with light/dark theme */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.4);
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--muted));
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted));
+}
+
+/* Utility class for views that scroll: keep gutter stable and spacing tidy */
+.nice-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable; /* Prevent layout shift when scrollbar appears */
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;

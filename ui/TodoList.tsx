@@ -1,8 +1,9 @@
 import * as React from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import { useTodoTasks } from "../hooks/useTodos"
 import { ExpandableInput } from "../components/ui/expandable-input"
 import { Button } from "../components/ui/button"
-import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText } from "lucide-react"
+import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText, ClipboardList } from "lucide-react"
 import { Checkbox } from "../components/ui/checkbox"
 import { Tooltip } from "../components/ui/tooltip"
 
@@ -52,7 +53,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   const toggleGlobalExpansion = React.useCallback(() => {
     const newGlobalExpanded = !globalExpanded
     setGlobalExpanded(newGlobalExpanded)
-    
+
     if (newGlobalExpanded) {
       // 展開所有多行項目
       const multilineIds = visibleTodoTasks
@@ -104,7 +105,12 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
       </div>
       {listLabel && (
         <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
+            <span className="inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-2 text-[10px] font-medium text-muted-foreground">
+              {visibleTodoTasks.length}
+            </span>
+          </div>
           {visibleTodoTasks.some(t => isMultiline(t.title)) && (
             <Tooltip content={globalExpanded ? "全部摺疊" : "全部展開"}>
               <Button
@@ -123,79 +129,100 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
       {isLoading ? (
         <div className="text-sm text-muted-foreground">載入中...</div>
       ) : visibleTodoTasks.length === 0 ? (
-        <div className="text-sm text-muted-foreground text-center py-4">
-          {hideCompleted ? "目前沒有未完成的任務" : "目前沒有任務"}
+        <div className="flex flex-col items-center justify-center text-muted-foreground py-10">
+          <ClipboardList className="h-12 w-12 opacity-60 mb-2" />
+          <div className="text-sm">目前沒有任務</div>
         </div>
       ) : (
-        <ul className="space-y-2 overflow-y-auto w-full max-w-full" style={{ maxHeight }}>
-          {visibleTodoTasks.map((t) => {
-            const isMultilineTodo = isMultiline(t.title)
-            const isExpanded = expandedItems.has(t.id)
-            const displayText = isMultilineTodo && !isExpanded ? getFirstLine(t.title) : t.title
+        <ul className="space-y-2 nice-scroll w-full max-w-full" style={{ maxHeight }}>
+          <AnimatePresence initial={false}>
+            {visibleTodoTasks.map((t) => {
+              const isMultilineTodo = isMultiline(t.title)
+              const isExpanded = expandedItems.has(t.id)
+              const displayText = isMultilineTodo && !isExpanded ? getFirstLine(t.title) : t.title
 
-            return (
-              <li key={t.id} className="group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent transition-all duration-200">
-                <Checkbox
-                  checked={t.completed}
-                  onCheckedChange={() => toggle.mutate(t.id)}
-                  disabled={toggle.isPending}
-                  className="mt-0.5 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm break-words whitespace-pre-wrap ${t.completed ? "line-through text-muted-foreground" : ""}`}>
-                    {displayText}
-                  </div>
-                  {isMultilineTodo && !isExpanded && (
-                    <button
-                      onClick={() => toggleItemExpansion(t.id)}
-                      className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
+              return (
+                <motion.li
+                  key={t.id}
+                  layout
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
+                  className="group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent"
+                >
+                  <Checkbox
+                    checked={t.completed}
+                    onCheckedChange={() => toggle.mutate(t.id)}
+                    disabled={toggle.isPending}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <motion.div layout className="flex-1 min-w-0">
+                    <motion.div
+                      layout
+                      className={`text-sm break-words whitespace-pre-wrap ${t.completed ? "line-through text-muted-foreground" : ""}`}
+                      transition={{ layout: { duration: 0.2 } }}
                     >
-                      <ChevronDown className="h-3 w-3" />
-                      顯示完整內容
-                    </button>
-                  )}
-                  {isMultilineTodo && isExpanded && (
-                    <button
-                      onClick={() => toggleItemExpansion(t.id)}
-                      className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
-                    >
-                      <ChevronRight className="h-3 w-3 rotate-90" />
-                      收合
-                    </button>
-                  )}
-                </div>
-                {iconOnlyActions ? (
-                  // POPUP 模式：hover 時顯示刪除按鈕
-                  <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0">
+                      {displayText}
+                    </motion.div>
+                    {isMultilineTodo && !isExpanded && (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => toggleItemExpansion(t.id)}
+                        className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                        顯示完整內容
+                      </motion.button>
+                    )}
+                    {isMultilineTodo && isExpanded && (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => toggleItemExpansion(t.id)}
+                        className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
+                      >
+                        <ChevronRight className="h-3 w-3 rotate-90" />
+                        收合
+                      </motion.button>
+                    )}
+                  </motion.div>
+                  {iconOnlyActions ? (
+                    // POPUP 模式：hover 時顯示刪除按鈕
+                    <motion.div layout className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
+                      <Tooltip content="刪除任務">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove.mutate(t.id)}
+                          disabled={remove.isPending}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </Tooltip>
+                    </motion.div>
+                  ) : (
+                    // SIDEPANEL 模式：一直顯示圖標按鈕
                     <Tooltip content="刪除任務">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => remove.mutate(t.id)}
                         disabled={remove.isPending}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </Tooltip>
-                  </div>
-                ) : (
-                  // SIDEPANEL 模式：一直顯示圖標按鈕
-                  <Tooltip content="刪除任務">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => remove.mutate(t.id)}
-                      disabled={remove.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </Tooltip>
-                )}
-              </li>
-            )
-          })}
+                  )}
+                </motion.li>
+              )
+            })}
+          </AnimatePresence>
         </ul>
       )}
     </div>
