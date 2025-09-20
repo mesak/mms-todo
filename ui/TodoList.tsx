@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useTodoTasks } from "../hooks/useTodos"
 import { ExpandableInput } from "../components/ui/expandable-input"
 import { Button } from "../components/ui/button"
-import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText } from "lucide-react"
+import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText, ClipboardList } from "lucide-react"
 import { Checkbox } from "../components/ui/checkbox"
 import { Tooltip } from "../components/ui/tooltip"
 
@@ -105,7 +105,12 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
       </div>
       {listLabel && (
         <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium text-muted-foreground">{listLabel}</div>
+            <span className="inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-2 text-[10px] font-medium text-muted-foreground">
+              {visibleTodoTasks.length}
+            </span>
+          </div>
           {visibleTodoTasks.some(t => isMultiline(t.title)) && (
             <Tooltip content={globalExpanded ? "全部摺疊" : "全部展開"}>
               <Button
@@ -124,8 +129,9 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
       {isLoading ? (
         <div className="text-sm text-muted-foreground">載入中...</div>
       ) : visibleTodoTasks.length === 0 ? (
-        <div className="text-sm text-muted-foreground text-center py-4">
-          {hideCompleted ? "目前沒有未完成的任務" : "目前沒有任務"}
+        <div className="flex flex-col items-center justify-center text-muted-foreground py-10">
+          <ClipboardList className="h-12 w-12 opacity-60 mb-2" />
+          <div className="text-sm">目前沒有任務</div>
         </div>
       ) : (
         <ul className="space-y-2 nice-scroll w-full max-w-full" style={{ maxHeight }}>

@@ -9,6 +9,7 @@
     "./src/**/*.tsx"
   ],
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "paths": {
       "~*": [
         "./src/*"
