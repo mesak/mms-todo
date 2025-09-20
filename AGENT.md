@@ -1,116 +1,102 @@
-# AGENT 指南（維護者/自動化代理）
+# AGENT 指南 (維護者/自動化代理)
 
-本文件面向維護者與自動化代理（Agent）。內容包含架構總覽、資料契約、狀態流、關鍵慣例與修改指南，協助你在不破壞既有功能的前提下安全地擴充此專案。
+本文件旨在協助維護者與自動化代理（Agent）理解本專案的架構與開發流程。內容涵蓋了專案的雙重架構、資料模型、關鍵慣例與未來的開發路線圖。
 
-## 專案宗旨
-- 瀏覽器擴充功能（Chrome，MV3），提供簡潔的待辦清單（Todo）與類別管理。
-- 介面包含 Popup、Side Panel 與 Options 頁。
-- 全部資料儲存在 `chrome.storage.local`，不依賴雲端後端。
+## 1. 專案宗旨與架構演進
 
-## 技術棧與核心套件
-- React 18、TypeScript 5
-- Plasmo（打包/產生 MV3 入口）
-- TanStack React Query（快取與資料同步）
-- Tailwind CSS + shadcn 風格 UI 組件 + Radix UI
+本專案是一個瀏覽器擴充功能（Chrome, MV3），旨在提供一個簡潔高效的待辦清單（Todo）管理工具。
 
-## 重要入口與組件
-- `popup.tsx`：彈出視窗入口。可選取類別並新增/檢視 Todo，含「開啟側邊面板」按鈕。
-- `sidepanel.tsx`：側邊面板入口。左側為類別清單（可新增/重新命名/刪除），右側為 Todo 清單。
-- `options.tsx`：擴充功能設定頁（目前示範儲存 username）。
-- `providers.tsx`：建立全域 `QueryClient` 並以 `QueryClientProvider` 包裹應用。
-- `hooks/useTodos.ts`：封裝 Todo 與 Category 的查詢/變更；資料來源為 `chrome.storage.local`。
-- `ui/TodoList.tsx`：Todo 清單的主要 UI 與互動。
-- `components/ui/*` 與 `components/sidepanel/*`：UI 原子元件與側邊欄骨架。
+- **當前狀態**: 目前版本是一個功能完整的**本地待辦清單**擴充功能。所有資料都安全地儲存在 `chrome.storage.local` 中，無需網路連線即可使用。
+- **未來目標**: 專案的最終目標是與 **Microsoft To Do** 進行深度整合，實現資料的雲端同步與跨裝置存取。
+- **核心架構**: 專案正處於一個「混合架構」的過渡階段。目前的 UI 完全由本地儲存驅動，但底層已經內建了與 Microsoft Graph API 互動的完整 hooks，為未來的整合鋪平了道路。
 
-## 資料模型（契約）
-檔案：`types/todo.ts`
+## 2. 技術棧
 
-- Category
-  - `id: string`
-  - `name: string`
-  - `color?: string`
-  - `createdAt: number`
+- **框架**: React 18, TypeScript 5
+- **打包工具**: Plasmo (專為瀏覽器擴充功能設計)
+- **狀態管理/快取**: TanStack React Query v5
+- **UI**: Tailwind CSS + shadcn 風格組件 (基於 Radix UI)
+- **API 互動**: `fetch` API (用於 Microsoft Graph)
 
-- Todo
-  - `id: string`
-  - `title: string`
-  - `completed: boolean`
-  - `categoryId: string`
-  - `createdAt: number`
+## 3. 兩種資料來源模式
 
-注意：
-- 類別在初始載入時，若不存在，會自動建立預設類別：`{ id: "work", name: "工作" }`。
-- 預設類別 `work` 不能被刪除。
+本專案包含兩套並行的資料處理邏輯，分別對應本地儲存和遠端 API。
 
-## 儲存鍵值（chrome.storage.local）
-- `todos`：Todo[]
-- `categories`：Category[]
-- `settings`：Options 頁設定（目前僅 `{ username }`）
-- `sidebarCollapsed`：布林值，記錄側邊欄收合狀態（`components/ui/sidebar.tsx`）
+### 3.1. 本地儲存模式 (`hooks/useTodos.ts`)
 
-## React Query 使用慣例
-- 查詢鍵（Query Keys）
-  - Todos：`["todos", selectedCategoryId]`（若未指定類別，回傳所有 Todos）
-  - Categories：`["categories"]`
-- 變更（Mutations）完成後一律 `invalidateQueries`：
-  - Todos 相關變更：`invalidateQueries({ queryKey: ["todos"] })`
-  - Categories 相關變更：`invalidateQueries({ queryKey: ["categories"] })`
+這是**目前 UI 唯一使用的模式**。
 
-## 使用者流程與邏輯
-- Popup：
-  - 可切換「類別」與新增 Todo。
-  - 可點擊按鈕開啟 Side Panel：`chrome.sidePanel.open({ tabId })`。
-- Side Panel：
-  - 左側清單可新增/重新命名/刪除類別（`work` 例外）。
-  - 刪除類別時，若該類別仍有未完成 Todo，會先 `confirm` 提示。
-  - 右側為 TodoList，可新增/完成/刪除。
-- Options：
-  - 存取 `settings.username`。
+- **資料來源**: `chrome.storage.local`
+- **儲存鍵**:
+  - `todoTasks`: `TodoTask[]`
+  - `todoLists`: `TodoList[]`
+- **核心 Hooks**: `useTodoTasks`, `useTodoLists`
+- **資料模型** (定義於 `types/todo.ts`):
+  - `TodoList`: `{ id, name, createdAt }`
+  - `TodoTask`: `{ id, title, completed, todoListId, createdAt }`
+- **備註**: 此模式提供離線功能，並在沒有 Microsoft 帳戶登入時作為預設選項。
 
-## 邊界條件與注意事項
-- `crypto.randomUUID()` 用於產生 ID。需在 MV3 環境執行（Chrome 支援）。
-- 刪除類別時的連動：
-  - 類別刪除後，該類別下的 Todos 會逐一刪除（呼叫 `removeTodo.mutate`）。
-  - 若刪除的是當前選取類別，會切換到剩餘第一個類別（如存在）。
-- 初次載入無類別時會自動建立 `work`；UI 預設選取 `work`。
-- 文案目前為繁體中文（未導入 i18n）。
+### 3.2. Microsoft Graph API 模式 (`hooks/useMsTodos.ts`)
 
-## 程式風格
-- 使用 Prettier 3 與 `@ianvs/prettier-plugin-sort-imports`（見 `.prettierrc.mjs`）。
-- Tailwind 以 `cn`（`lib/utils.ts`）合併 class。
-- 請避免在 UI 元件中進行與儲存層強耦合的邏輯；存取儲存層請透過 hooks。
+這代表了專案的**未來整合方向**，目前已完成底層 hook 開發，但尚未與 UI 連接。
 
-## 常見修改場景與指引
-1) 新增 Todo 欄位（例如 `dueDate`）
-- 更新 `types/todo.ts`。
-- 在 `hooks/useTodos.ts` 中，新增/更新寫入時補齊預設值。必要時考慮在讀取時做一次性資料遷移（針對舊資料缺欄位）。
-- 調整 `ui/TodoList.tsx` 與相關顯示/輸入。
+- **資料來源**: Microsoft Graph API
+- **API 端點**: `https://graph.microsoft.com/v1.0/me/todo/...`
+- **必要條件**: 一個有效的 Microsoft Graph API access token (需透過 OAuth 2.0 取得)。
+- **核心 Hooks**: `useMsTodoLists`, `useMsTasks`, `useCreateMsTask` 等。
+- **資料模型** (定義於 `hooks/useMsTodos.ts`):
+  - `TodoTaskList`: `{ id, displayName, ... }`
+  - `TodoTask`: `{ id, title, status, importance, body, ... }`
+- **備註**: 此模式的模型比本地模型更豐富。在實現整合時，需要注意欄位的對應關係（例如 `name` vs `displayName`, `completed` vs `status`)。
 
-2) 新增類別屬性（例如 `color`）
-- 更新 `types/todo.ts` 與 `hooks/useTodos.ts` 的 `add/update` 流程。
-- 在側邊欄顯示該屬性（`components/sidepanel/app-sidebar.tsx`）。
+## 4. 認證流程 (待辦事項)
 
-3) 調整 Query Key 或快取策略
-- 若變更 Query Key，務必同步 `invalidateQueries` 的 key。
-- 若改變 `staleTime`/`refetchOnWindowFocus` 等行為，請於 `providers.tsx` 統一設定。
+為了啟用 Microsoft To Do 同步功能，需要完成 OAuth 2.0 的認證流程。`package.json` 中的 `manifest` 已預先設定了必要的權限 (`identity`, `oauth2`)。
 
-4) 新增新頁面/內容腳本
-- 依 Plasmo 規範在專案根目錄新增對應檔案（例如 `content.ts`、`newpage.tsx`），Plasmo 會自動產出對應 entry。
+**待辦的實現步驟**:
+1.  在 UI (建議 `options.tsx` 或 `sidepanel.tsx` 的設定區) 新增「使用 Microsoft 帳戶登入/登出」的按鈕。
+2.  **登入**: 呼叫 `chrome.identity.getAuthToken({ interactive: true })` 來觸發 OAuth 流程並獲取 access token。
+3.  **儲存 Token**: 將獲取到的 token 儲存在一個安全的地方，例如 React Context、全域狀態或 `chrome.storage.session`（非永久儲存）。
+4.  **傳遞 Token**: 將 token 傳遞給 `useMsTodos.ts` 中的各個 hooks。
+5.  **登出**: 呼叫 `chrome.identity.removeCachedAuthToken` 來清除 token，並將應用程式狀態切換回本地模式。
 
-5) 錯誤處理/回饋
-- 目前 mutation error 僅在 console 紀錄。若要導入 UI 通知，建議封裝一個 Toast/HUD 元件並在 hooks 的 `onError` 或呼叫端處理。
+## 5. 關鍵入口與組件
 
-## 發佈與 CI
-- 本地：`pnpm package` 會輸出 ZIP 檔至 `build/chrome-mv3-prod.zip`。
-- GitHub Actions：`.github/workflows/submit.yml` 使用 `PlasmoHQ/bpp@v3`，需要在 repo secrets 設定 `SUBMIT_KEYS`。
-- CI 目前使用 Node 16（`setup-node@v3`），本機開發建議 Node 18+ 亦可，但請確保與 CI 行為一致。
+- `popup.tsx`: 彈出視窗。目前用於快速新增和檢視**本地**任務。
+- `sidepanel.tsx`: 側邊面板。提供完整的**本地**清單和任務管理介面。
+- `options.tsx`: 設定頁。目前僅用於儲存本地設定，是實現**登入功能**的理想位置。
+- `hooks/useTodos.ts`: 本地資料邏輯的核心。
+- `hooks/useMsTodos.ts`: 遠端資料邏輯的核心。
+- `providers.tsx`: 全域 `QueryClientProvider`，包裹整個應用。
 
-## 待辦清單（可由 Agent 自動化）
-- [ ] 加入基本測試與型別檢查流程（例如 `tsc --noEmit` CI step）。
-- [ ] 加入 UI 通知（Toast）以改善使用者回饋。
-- [ ] 匯入/匯出資料（JSON）功能。
-- [ ] 可選深色主題切換。
-- [ ] i18n 架構。
+## 6. 常見修改場景與指引
+
+### 場景 1: 在 UI 中顯示 MS To Do 的資料
+
+1.  **完成認證流程**: 參考第 4 節的步驟。
+2.  **條件性呼叫 Hooks**: 在 `sidepanel.tsx` 或 `popup.tsx` 中，根據使用者的登入狀態（即是否存在 token），來決定是呼叫 `useMsTodoLists` / `useMsTasks` 還是 `useTodoLists` / `useTodoTasks`。
+3.  **適應資料模型**: 調整 UI 元件以顯示來自 Graph API 的資料（例如，使用 `task.displayName` 而非 `task.name`）。
+
+### 場景 2: 實現雙向同步
+
+這是一個進階目標，需要謹慎設計。
+- **策略**: 決定同步的觸發時機（例如，啟動時、手動觸發、定期輪詢）。
+- **衝突解決**: 需要設計策略來處理本地與遠端的資料衝突。
+- **建議**: 初期可以先實現**單一資料來源模式**（登入後只使用遠端資料，登出後只使用本地資料），這樣可以避免同步的複雜性。
+
+## 7. 發佈與 CI
+
+- 本地打包: `pnpm package` 會產生 `build/chrome-mv3-prod.zip`。
+- CI/CD: `.github/workflows/submit.yml` 使用 Plasmo 的 GitHub Action 進行自動提交。
+- **注意**: 若要使 OAuth 正常運作，發佈到 Chrome 商店的擴充功能 ID 必須與在 Google API Console 和 Azure AD 應用程式中註冊的 ID 一致。
+
+## 8. 待辦清單 (可由 Agent 自動化)
+
+- **[ ] 實現 Microsoft 帳戶登入/登出功能 (參考第 4 節)。**
+- **[ ] 在 UI 中根據登入狀態，切換使用本地或遠端資料來源。**
+- [ ] 加入 UI 通知 (Toast) 以改善使用者操作回饋。
+- [ ] 提供匯出/匯入本地資料 (JSON) 的功能。
+- [ ] 探索 i18n 國際化方案。
 
 ---
 若要進行非向後相容的更動，請在 PR 中清楚標註破壞性改動與遷移步驟。
