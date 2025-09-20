@@ -40,11 +40,16 @@
     "typescript": "5.3.3"
   },
   "manifest": {
+    "oauth2": {
+      "client_id": "c9f320b3-a966-4bb7-8d88-3b51ae7f632f",
+      "scopes": [ "Tasks.ReadWrite", "User.Read", "offline_access" ]
+    },
     "permissions": [
-      "storage"
+      "identity", "storage", "notifications", "alarms"
     ],
     "host_permissions": [
-      "https://*/*"
+      "https://graph.microsoft.com/*",
+      "https://login.microsoftonline.com/*"
     ],
     "options_ui": {
       "page": "options.html",

@@ -7,7 +7,13 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground m-0 h-screen;
+    @apply bg-background text-foreground m-0 h-screen overflow-hidden;
+  }
+  html {
+    @apply h-full;
+  }
+  #__plasmo {
+    @apply h-full;
   }
 }
 

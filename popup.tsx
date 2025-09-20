@@ -21,24 +21,28 @@ function PopupContent() {
     }
 
     return (
-        <div className="w-[360px] min-h-[400px] bg-background text-foreground border-none shadow-none">
-            <div className="p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                    <CategoryCombobox
-                        categories={categories}
-                        selectedCategoryId={selectedCategoryId}
-                        onChange={setSelectedCategoryId}
-                    />
+        <div className="w-[360px] min-h-[400px] max-w-[360px] bg-background text-foreground border-none shadow-none overflow-hidden">
+            <div className="p-3 space-y-3 w-full max-w-full box-border">
+                <div className="flex items-center justify-between gap-2 w-full max-w-full">
+                    <div className="flex-1 min-w-0">
+                        <CategoryCombobox
+                            categories={categories}
+                            selectedCategoryId={selectedCategoryId}
+                            onChange={setSelectedCategoryId}
+                        />
+                    </div>
                     <Tooltip content="開啟側邊面板">
                         <button
                             onClick={openSidePanel}
-                            className="p-2 hover:bg-accent rounded-md transition-colors text-foreground"
+                            className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
                         >
                             <PanelRightOpen className="h-4 w-4" />
                         </button>
                     </Tooltip>
                 </div>
-                <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" iconOnlyActions />
+                <div className="w-full max-w-full overflow-hidden">
+                    <TodoList selectedCategoryId={selectedCategoryId} hideCompleted listLabel="未完成任務" iconOnlyActions />
+                </div>
             </div>
         </div>
     )

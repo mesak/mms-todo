@@ -28,9 +28,24 @@ type AppSidebarProps = {
     categories: Category[]
     selectedCategoryId: string
     onSelectCategory: (id: string) => void
+    isOverlay?: boolean
 }
 
-export function AppSidebar({ categories, selectedCategoryId, onSelectCategory }: AppSidebarProps) {
+export function AppSidebar({ categories, selectedCategoryId, onSelectCategory, isOverlay = false }: AppSidebarProps) {
+    if (isOverlay) {
+        return (
+            <div className="h-full">
+                <div className="p-4">
+                    <NavMainOverlay
+                        categories={categories}
+                        selectedCategoryId={selectedCategoryId}
+                        onSelectCategory={onSelectCategory}
+                    />
+                </div>
+            </div>
+        )
+    }
+
     return (
         <Sidebar collapsible="icon" className={cn("bg-background")}>
             <SidebarHeader>
@@ -49,6 +64,177 @@ export function AppSidebar({ categories, selectedCategoryId, onSelectCategory }:
             <SidebarFooter>v1.0</SidebarFooter>
             <SidebarRail />
         </Sidebar>
+    )
+}
+
+function NavMainOverlay({ categories, selectedCategoryId, onSelectCategory }: { categories: Category[]; selectedCategoryId: string; onSelectCategory: (id: string) => void }) {
+    const { add, update, remove } = useCategories()
+    const { data: allTodos = [], remove: removeTodo } = useTodos()
+
+    const [adding, setAdding] = React.useState(false)
+    const [newName, setNewName] = React.useState("")
+    const [editingId, setEditingId] = React.useState<string | null>(null)
+    const [editName, setEditName] = React.useState("")
+
+    const pendingCountByCategory = React.useMemo(() => {
+        const map = new Map<string, number>()
+        for (const t of allTodos) {
+            if (!t.completed) {
+                map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + 1)
+            }
+        }
+        return map
+    }, [allTodos])
+
+    const handleAdd = () => {
+        if (!newName.trim()) return
+        add.mutate(newName.trim(), {
+            onSuccess: () => {
+                setNewName("")
+                setAdding(false)
+            }
+        })
+    }
+
+    const startEdit = (c: Category) => {
+        setEditingId(c.id)
+        setEditName(c.name)
+    }
+
+    const handleSaveEdit = () => {
+        if (!editingId || !editName.trim()) return
+        update.mutate({ id: editingId, name: editName.trim() }, {
+            onSuccess: () => {
+                setEditingId(null)
+                setEditName("")
+            }
+        })
+    }
+
+    const handleDelete = (id: string) => {
+        if (id === "work") return
+        const incomplete = pendingCountByCategory.get(id) ?? 0
+        if (incomplete > 0) {
+            const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
+            if (!ok) return
+        }
+        const todosInCat = allTodos.filter(t => t.categoryId === id)
+        remove.mutate(id, {
+            onSuccess: () => {
+                todosInCat.forEach(t => removeTodo.mutate(t.id))
+                // 若刪除的是目前選取的類別，嘗試切到第一個類別
+                if (selectedCategoryId === id && categories.length > 0) {
+                    const next = categories.find(c => c.id !== id)
+                    if (next) onSelectCategory(next.id)
+                }
+            }
+        })
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* 待辦事項標題 */}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md">
+                <ListTodo className="size-4" />
+                <span>待辦事項</span>
+            </div>
+
+            {/* 類別管理 */}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between px-3">
+                    <span className="text-sm font-medium">類別</span>
+                    <Tooltip content={adding ? "取消" : "新增類別"}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => {
+                                setAdding((s) => !s)
+                                setNewName("")
+                            }}
+                        >
+                            {adding ? <span className="text-xs">取消</span> : <Plus className="h-4 w-4" />}
+                        </Button>
+                    </Tooltip>
+                </div>
+
+                <div className="space-y-1">
+                    {adding && (
+                        <div className="flex items-center gap-2 px-3">
+                            <input
+                                className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm"
+                                placeholder="輸入類別名稱..."
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleAdd()
+                                    if (e.key === "Escape") { setAdding(false); setNewName("") }
+                                }}
+                            />
+                            <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || add.isPending} className="h-8 px-3">
+                                新增
+                            </Button>
+                        </div>
+                    )}
+
+                    {categories.map((c) => (
+                        <div key={c.id} className="px-3">
+                            {editingId === c.id ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm"
+                                        value={editName}
+                                        autoFocus
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleSaveEdit()
+                                            if (e.key === "Escape") { setEditingId(null); setEditName("") }
+                                        }}
+                                    />
+                                    <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || update.isPending} className="h-8 px-3">
+                                        儲存
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        className={cn(
+                                            "flex-1 justify-start h-8 px-2",
+                                            selectedCategoryId === c.id && "bg-accent text-accent-foreground"
+                                        )}
+                                        onClick={() => onSelectCategory(c.id)}
+                                    >
+                                        <span className="truncate">{c.name}</span>
+                                        <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                                            {pendingCountByCategory.get(c.id) ?? 0}
+                                        </span>
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        <Tooltip content="重新命名">
+                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => startEdit(c)}>
+                                                <Edit2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </Tooltip>
+                                        <Tooltip content={c.id === "work" ? "無法刪除預設類別" : "刪除類別"}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                                                onClick={() => handleDelete(c.id)}
+                                                disabled={c.id === "work" || remove.isPending}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </Tooltip>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
     )
 }
 
