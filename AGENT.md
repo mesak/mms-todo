@@ -18,7 +18,7 @@
 - `sidepanel.tsx`：側邊面板入口。左側為類別清單（可新增/重新命名/刪除），右側為 Todo 清單。
 - `options.tsx`：擴充功能設定頁（目前示範儲存 username）。
 - `providers.tsx`：建立全域 `QueryClient` 並以 `QueryClientProvider` 包裹應用。
-- `hooks/useTodos.ts`：封裝 Todo 與 Category 的查詢/變更；資料來源為 `chrome.storage.local`。
+// 已移除：`hooks/useTodos.ts`（local storage 版本）
 - `ui/TodoList.tsx`：Todo 清單的主要 UI 與互動。
 - `components/ui/*` 與 `components/sidepanel/*`：UI 原子元件與側邊欄骨架。
 
@@ -83,11 +83,11 @@
 ## 常見修改場景與指引
 1) 新增 Todo 欄位（例如 `dueDate`）
 - 更新 `types/todo.ts`。
-- 在 `hooks/useTodos.ts` 中，新增/更新寫入時補齊預設值。必要時考慮在讀取時做一次性資料遷移（針對舊資料缺欄位）。
+// 已移除：`hooks/useTodos.ts` 新增/更新相關說明
 - 調整 `ui/TodoList.tsx` 與相關顯示/輸入。
 
 2) 新增類別屬性（例如 `color`）
-- 更新 `types/todo.ts` 與 `hooks/useTodos.ts` 的 `add/update` 流程。
+// 已移除：`hooks/useTodos.ts` 相關流程
 - 在側邊欄顯示該屬性（`components/sidepanel/app-sidebar.tsx`）。
 
 3) 調整 Query Key 或快取策略

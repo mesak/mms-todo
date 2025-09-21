@@ -20,7 +20,7 @@ import type { TodoList } from "../../types/todo"
 import { cn } from "../../lib/utils"
 // import { useTodoLists, useTodoTasks } from "../../hooks/useTodos"
 import { useAuth } from "../../hooks/useAuth"
-import { useMsTodoLists, useCreateMsTodoList, useDeleteMsTodoList, useRenameMsTodoList } from "../../hooks/useMsTodos"
+import { useMsTodoLists, useCreateMsTodoList, useDeleteMsTodoList, useRenameMsTodoList, usePendingCountsCache } from "../../hooks/useMsTodos"
 import { Button } from "../ui/button"
 import { Tooltip } from "../ui/tooltip"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
@@ -83,7 +83,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByTodoList = React.useMemo(() => new Map<string, number>(), [])
+    const counts = usePendingCountsCache(todoLists.map(l => l.id))
 
     const handleAdd = () => {
         if (!newName.trim()) return
@@ -112,7 +112,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByTodoList.get(id) ?? 0
+    const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
@@ -204,7 +204,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                     >
                                         <span className="truncate">{c.name}</span>
                                         <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                            {pendingCountByTodoList.get(c.id) ?? 0}
+                                            {counts.get(c.id) ?? 0}
                                         </span>
                                     </Button>
                                     <div className="flex items-center gap-1">
@@ -247,7 +247,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByTodoList = React.useMemo(() => new Map<string, number>(), [])
+    const counts = React.useMemo(() => usePendingCountsCache(todoLists.map(l => l.id)), [todoLists])
 
     const handleAdd = () => {
         if (!newName.trim()) return
@@ -276,7 +276,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByTodoList.get(id) ?? 0
+    const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
@@ -373,7 +373,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         <span className={cn("truncate", collapsed && "hidden")}>{c.name}</span>
                                         {!collapsed && (
                                             <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                                {pendingCountByTodoList.get(c.id) ?? 0}
+                                                {counts.get(c.id) ?? 0}
                                             </span>
                                         )}
                                     </SidebarMenuButton>

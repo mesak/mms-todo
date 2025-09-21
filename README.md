@@ -68,7 +68,7 @@ pnpm package
 - `sidepanel.tsx`：Side Panel 入口（左側類別，右側待辦）
 - `options.tsx`：Options 設定頁（示範儲存 `settings.username`）
 - `providers.tsx`：React Query Provider 與全域 client 設定
-- `hooks/useTodos.ts`：待辦與類別的查詢/新增/更新/刪除；資料來源為 `chrome.storage.local`
+// 已移除：原本的 `hooks/useTodos.ts`（使用 chrome.storage.local）已被 Graph 版本取代。
 - `ui/TodoList.tsx`：待辦清單 UI 與互動邏輯
 - `components/sidepanel/app-sidebar.tsx`：側邊欄（類別清單與操作）
 - `components/ui/*`：基礎 UI 元件（button、input、checkbox、tooltip、sidebar…）

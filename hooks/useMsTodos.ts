@@ -9,6 +9,8 @@
 */
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
+import { emitToast } from "../components/ui/toast"
+import * as React from "react"
 
 // -------------------------
 // Types (minimal, extend as needed)
@@ -198,7 +200,8 @@ export function useCreateMsTodoList(token?: string) {
         body: JSON.stringify(payload)
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() })
+    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() }),
+    onError: (error) => emitGraphErrorToast(error, "新增清單失敗")
   })
 }
 
@@ -213,7 +216,8 @@ export function useDeleteMsTodoList(token?: string) {
       qc.invalidateQueries({ queryKey: msq.lists() })
       // Invalidate related tasks caches
       qc.invalidateQueries({ queryKey: msq.tasks(listId as any) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "刪除清單失敗")
   })
 }
 
@@ -227,7 +231,8 @@ export function useRenameMsTodoList(token?: string) {
         body: JSON.stringify({ displayName })
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() })
+    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() }),
+    onError: (error) => emitGraphErrorToast(error, "重新命名清單失敗")
   })
 }
 
@@ -278,7 +283,8 @@ export function useCreateMsTask(token?: string) {
     },
     onSuccess: (_t, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "新增任務失敗")
   })
 }
 
@@ -295,7 +301,8 @@ export function useUpdateMsTask(token?: string) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
       qc.invalidateQueries({ queryKey: msq.task(vars.listId, vars.taskId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "更新任務失敗")
   })
 }
 
@@ -308,7 +315,8 @@ export function useDeleteMsTask(token?: string) {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "刪除任務失敗")
   })
 }
 
@@ -349,7 +357,8 @@ export function useAddMsTaskFileAttachment(token?: string) {
     },
     onSuccess: (_a, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "新增附件失敗")
   })
 }
 
@@ -372,7 +381,8 @@ export function useAddMsTaskReferenceAttachment(token?: string) {
     },
     onSuccess: (_a, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "新增連結附件失敗")
   })
 }
 
@@ -385,7 +395,8 @@ export function useDeleteMsTaskAttachment(token?: string) {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
-    }
+    },
+    onError: (error) => emitGraphErrorToast(error, "刪除附件失敗")
   })
 }
 
@@ -407,6 +418,42 @@ export function useInfiniteMsTasks(listId?: string, token?: string, opts?: { ena
     },
     getNextPageParam: (last) => last["@odata.nextLink"]
   })
+}
+
+// ----- helpers -----
+function emitGraphErrorToast(error: unknown, title: string) {
+  let description = ""
+  if (typeof error === "string") description = error
+  else if (error instanceof Error) description = error.message
+  else description = JSON.stringify(error)
+  emitToast({ title, description, variant: "destructive" })
+}
+
+// -------------------------
+// Derived cache: pending task counts per list
+// -------------------------
+export function usePendingCountsCache(listIds: string[]) {
+  const qc = useQueryClient()
+  const [counts, setCounts] = React.useState<Map<string, number>>(() => new Map(listIds.map(id => [id, 0])))
+
+  React.useEffect(() => {
+    const compute = () => {
+      const next = new Map<string, number>()
+      for (const id of listIds) {
+        const tasks = qc.getQueryData<TodoTask[]>(msq.tasks(id)) || []
+        const incomplete = tasks.filter(t => t.status !== "completed").length
+        next.set(id, incomplete)
+      }
+      setCounts(next)
+    }
+    compute()
+    const unsubscribe = qc.getQueryCache().subscribe(() => {
+      compute()
+    })
+    return () => { unsubscribe() }
+  }, [listIds.join("|"), qc])
+
+  return counts
 }
 
 // -------------------------
