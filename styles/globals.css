@@ -93,3 +93,14 @@
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 48%;
 }
+
+/* UI font scaling: map Tailwind text sizes to a container-controlled base */
+.with-ui-scale {
+  /* default fallback if not provided by JS */
+  --ui-font-size: 14px;
+}
+.with-ui-scale :where(.text-xs) { font-size: calc(var(--ui-font-size) * 0.75) !important; }
+.with-ui-scale :where(.text-sm) { font-size: calc(var(--ui-font-size) * 0.875) !important; }
+.with-ui-scale :where(.text-base) { font-size: var(--ui-font-size) !important; }
+.with-ui-scale :where(.text-lg) { font-size: calc(var(--ui-font-size) * 1.125) !important; }
+.with-ui-scale :where(.text-xl) { font-size: calc(var(--ui-font-size) * 1.25) !important; }
