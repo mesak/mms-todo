@@ -8,6 +8,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "./com
 import { TodoList } from "./ui/TodoList"
 import { Menu, X } from "lucide-react"
 import { Button } from "./components/ui/button"
+import { useSettings } from "./hooks/useSettings"
 
 export default function IndexSidePanel() {
     return (
@@ -21,6 +22,7 @@ function SidePanelShell() {
     const { data: todoLists = [], isLoading } = useTodoLists()
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
+    const { fontFamily, uiFontSize, itemFontSize } = useSettings()
 
     // Ensure a valid selected todo list when lists load or change
     React.useEffect(() => {
@@ -33,7 +35,10 @@ function SidePanelShell() {
     }, [todoLists, isLoading, selectedTodoListId])
 
     return (
-        <div className="fixed inset-0 w-screen h-screen bg-background text-foreground overflow-hidden flex flex-col">
+        <div
+            className="fixed inset-0 w-screen h-screen bg-background text-foreground overflow-hidden flex flex-col with-ui-scale"
+            style={{ fontFamily: fontFamily, ['--ui-font-size' as any]: `${uiFontSize}px`, ['--todo-item-font-size' as any]: `${itemFontSize}px` }}
+        >
             {/* Top Navbar */}
             <nav className="h-12 bg-background border-b border-border flex items-center justify-between px-4 shrink-0 z-50">
                 <div className="flex items-center gap-2">

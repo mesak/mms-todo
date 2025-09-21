@@ -160,7 +160,8 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                   <motion.div layout className="flex-1 min-w-0">
                     <motion.div
                       layout
-                      className={`text-sm break-words whitespace-pre-wrap ${t.completed ? "line-through text-muted-foreground" : ""}`}
+                      className={`break-words whitespace-pre-wrap ${t.completed ? "line-through text-muted-foreground" : ""}`}
+                      style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
                       transition={{ layout: { duration: 0.2 } }}
                     >
                       {displayText}
