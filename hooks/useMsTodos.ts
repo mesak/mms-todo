@@ -136,6 +136,7 @@ async function graphCollectAll<T>(first: GraphPage<T>, token: string): Promise<T
 
 export const msq = {
   root: ["msgraph"] as const,
+  me: () => ["msgraph", "me"] as const,
   lists: () => ["msgraph", "lists"] as const,
   tasks: (listId: string) => ["msgraph", "tasks", listId] as const,
   task: (listId: string, taskId: string) => ["msgraph", "task", listId, taskId] as const,
@@ -145,6 +146,33 @@ export const msq = {
 // -------------------------
 // Hooks: Lists
 // -------------------------
+
+export type MeProfile = {
+  id: string
+  displayName?: string
+  givenName?: string
+  surname?: string
+  userPrincipalName?: string
+  mail?: string
+  jobTitle?: string
+  mobilePhone?: string
+  officeLocation?: string
+  preferredLanguage?: string
+  // extra fields tolerated
+  [key: string]: any
+}
+
+export function useMsMe(token?: string, opts?: { enabled?: boolean }) {
+  const enabled = (opts?.enabled ?? true) && !!token
+  return useQuery({
+    queryKey: msq.me(),
+    enabled,
+    queryFn: async (): Promise<MeProfile> => {
+      assertToken(token)
+      return graphFetch<MeProfile>("/me", token)
+    }
+  })
+}
 
 export function useMsTodoLists(token?: string, opts?: { enabled?: boolean; collectAll?: boolean }) {
   const enabled = (opts?.enabled ?? true) && !!token
