@@ -1,6 +1,7 @@
 import * as React from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useTodoTasks } from "../hooks/useTodos"
+import { useAuth } from "../hooks/useAuth"
+import { useMsTasks, useCreateMsTask, useDeleteMsTask, useUpdateMsTask } from "../hooks/useMsTodos"
 import { ExpandableInput } from "../components/ui/expandable-input"
 import { Button } from "../components/ui/button"
 import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText, ClipboardList } from "lucide-react"
@@ -19,7 +20,11 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
-  const { data: todoTasks = [], isLoading, add, toggle, remove } = useTodoTasks(selectedTodoListId)
+  const { token } = useAuth()
+  const { data: todoTasks = [], isLoading } = useMsTasks(selectedTodoListId, token, { enabled: !!selectedTodoListId })
+  const createTask = useCreateMsTask(token)
+  const deleteTask = useDeleteMsTask(token)
+  const updateTask = useUpdateMsTask(token)
 
   // 檢查是否為多行內容
   const isMultiline = React.useCallback((text: string) => {
@@ -46,7 +51,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   }, [])
 
   const visibleTodoTasks = React.useMemo(() => {
-    return hideCompleted ? todoTasks.filter((t) => !t.completed) : todoTasks
+    return hideCompleted ? todoTasks.filter((t) => t.status !== "completed") : todoTasks
   }, [todoTasks, hideCompleted])
 
   // 全部展開/摺疊
@@ -68,18 +73,14 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
 
   const onAdd = React.useCallback(() => {
     if (!title.trim()) return
-    add.mutate(
-      { title: title.trim(), todoListId: selectedTodoListId },
+    createTask.mutate(
+      { listId: selectedTodoListId, task: { title: title.trim() } },
       {
-        onSuccess: () => {
-          setTitle("")
-        },
-        onError: (error) => {
-          console.error("Failed to add todo:", error)
-        }
+        onSuccess: () => setTitle(""),
+        onError: (error) => console.error("Failed to add todo:", error)
       }
     )
-  }, [title, selectedTodoListId, add])
+  }, [title, selectedTodoListId, createTask])
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -152,15 +153,15 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                   className={`group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent ${iconOnlyActions ? "relative" : ""}`}
                 >
                   <Checkbox
-                    checked={t.completed}
-                    onCheckedChange={() => toggle.mutate(t.id)}
-                    disabled={toggle.isPending}
+                    checked={t.status === "completed"}
+                    onCheckedChange={() => updateTask.mutate({ listId: selectedTodoListId, taskId: t.id, patch: { status: t.status === "completed" ? "notStarted" : "completed" } })}
+                    disabled={updateTask.isPending}
                     className="mt-0.5 shrink-0"
                   />
                   <motion.div layout className="flex-1 min-w-0">
                     <motion.div
                       layout
-                      className={`break-words whitespace-pre-wrap ${t.completed ? "line-through text-muted-foreground" : ""}`}
+                      className={`break-words whitespace-pre-wrap ${t.status === "completed" ? "line-through text-muted-foreground" : ""}`}
                       style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
                       transition={{ layout: { duration: 0.2 } }}
                     >
@@ -203,8 +204,8 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => remove.mutate(t.id)}
-                          disabled={remove.isPending}
+                          onClick={() => deleteTask.mutate({ listId: selectedTodoListId, taskId: t.id })}
+                          disabled={deleteTask.isPending}
                           className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -217,8 +218,8 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => remove.mutate(t.id)}
-                        disabled={remove.isPending}
+                        onClick={() => deleteTask.mutate({ listId: selectedTodoListId, taskId: t.id })}
+                        disabled={deleteTask.isPending}
                         className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -18,7 +18,9 @@ import {
 } from "../ui/sidebar"
 import type { TodoList } from "../../types/todo"
 import { cn } from "../../lib/utils"
-import { useTodoLists, useTodoTasks } from "../../hooks/useTodos"
+// import { useTodoLists, useTodoTasks } from "../../hooks/useTodos"
+import { useAuth } from "../../hooks/useAuth"
+import { useMsTodoLists, useCreateMsTodoList, useDeleteMsTodoList, useRenameMsTodoList, usePendingCountsCache } from "../../hooks/useMsTodos"
 import { Button } from "../ui/button"
 import { Tooltip } from "../ui/tooltip"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
@@ -70,27 +72,22 @@ export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, is
 }
 
 function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
-    const { add, update, remove } = useTodoLists()
-    const { data: allTodoTasks = [], remove: removeTodoTask } = useTodoTasks()
+    const { token } = useAuth()
+    const { /* data: msLists = [] */ } = useMsTodoLists(token)
+    const createList = useCreateMsTodoList(token)
+    const deleteList = useDeleteMsTodoList(token)
+    const renameList = useRenameMsTodoList(token)
 
     const [adding, setAdding] = React.useState(false)
     const [newName, setNewName] = React.useState("")
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByTodoList = React.useMemo(() => {
-        const map = new Map<string, number>()
-        for (const t of allTodoTasks) {
-            if (!t.completed) {
-                map.set(t.todoListId, (map.get(t.todoListId) ?? 0) + 1)
-            }
-        }
-        return map
-    }, [allTodoTasks])
+    const counts = usePendingCountsCache(todoLists.map(l => l.id))
 
     const handleAdd = () => {
         if (!newName.trim()) return
-        add.mutate(newName.trim(), {
+        createList.mutate({ displayName: newName.trim() }, {
             onSuccess: () => {
                 setNewName("")
                 setAdding(false)
@@ -105,7 +102,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
 
     const handleSaveEdit = () => {
         if (!editingId || !editName.trim()) return
-        update.mutate({ id: editingId, name: editName.trim() }, {
+        renameList.mutate({ listId: editingId, displayName: editName.trim() }, {
             onSuccess: () => {
                 setEditingId(null)
                 setEditName("")
@@ -115,15 +112,13 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByTodoList.get(id) ?? 0
+    const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
         }
-        const todosInCat = allTodoTasks.filter(t => t.todoListId === id)
-        remove.mutate(id, {
+        deleteList.mutate(id, {
             onSuccess: () => {
-                todosInCat.forEach(t => removeTodoTask.mutate(t.id))
                 // 若刪除的是目前選取的類別，嘗試切到第一個類別
                 if (selectedTodoListId === id && todoLists.length > 0) {
                     const next = todoLists.find(c => c.id !== id)
@@ -173,7 +168,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                     if (e.key === "Escape") { setAdding(false); setNewName("") }
                                 }}
                             />
-                            <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || add.isPending} className="h-8 px-3">
+                            <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || createList.isPending} className="h-8 px-3">
                                 新增
                             </Button>
                         </div>
@@ -193,7 +188,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                             if (e.key === "Escape") { setEditingId(null); setEditName("") }
                                         }}
                                     />
-                                    <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || update.isPending} className="h-8 px-3">
+                                    <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || renameList.isPending} className="h-8 px-3">
                                         儲存
                                     </Button>
                                 </div>
@@ -209,7 +204,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                     >
                                         <span className="truncate">{c.name}</span>
                                         <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                            {pendingCountByTodoList.get(c.id) ?? 0}
+                                            {counts.get(c.id) ?? 0}
                                         </span>
                                     </Button>
                                     <div className="flex items-center gap-1">
@@ -224,7 +219,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                                 size="sm"
                                                 className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-50"
                                                 onClick={() => handleDelete(c.id)}
-                                                disabled={c.id === "work" || remove.isPending}
+                                                disabled={c.id === "work" || deleteList.isPending}
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
@@ -242,27 +237,21 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
 
 function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
     const { collapsed } = useSidebar()
-    const { add, update, remove } = useTodoLists()
-    const { data: allTodos = [], remove: removeTodo } = useTodoTasks()
+    const { token } = useAuth()
+    const createList = useCreateMsTodoList(token)
+    const deleteList = useDeleteMsTodoList(token)
+    const renameList = useRenameMsTodoList(token)
 
     const [adding, setAdding] = React.useState(false)
     const [newName, setNewName] = React.useState("")
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const pendingCountByTodoList = React.useMemo(() => {
-        const map = new Map<string, number>()
-        for (const t of allTodos) {
-            if (!t.completed) {
-                map.set(t.todoListId, (map.get(t.todoListId) ?? 0) + 1)
-            }
-        }
-        return map
-    }, [allTodos])
+    const counts = React.useMemo(() => usePendingCountsCache(todoLists.map(l => l.id)), [todoLists])
 
     const handleAdd = () => {
         if (!newName.trim()) return
-        add.mutate(newName.trim(), {
+        createList.mutate({ displayName: newName.trim() }, {
             onSuccess: () => {
                 setNewName("")
                 setAdding(false)
@@ -277,7 +266,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
 
     const handleSaveEdit = () => {
         if (!editingId || !editName.trim()) return
-        update.mutate({ id: editingId, name: editName.trim() }, {
+        renameList.mutate({ listId: editingId, displayName: editName.trim() }, {
             onSuccess: () => {
                 setEditingId(null)
                 setEditName("")
@@ -287,15 +276,13 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-        const incomplete = pendingCountByTodoList.get(id) ?? 0
+    const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
             const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
             if (!ok) return
         }
-        const todosInCat = allTodos.filter(t => t.todoListId === id)
-        remove.mutate(id, {
+        deleteList.mutate(id, {
             onSuccess: () => {
-                todosInCat.forEach(t => removeTodo.mutate(t.id))
                 // 若刪除的是目前選取的類別，嘗試切到第一個類別
                 if (selectedTodoListId === id && todoLists.length > 0) {
                     const next = todoLists.find(c => c.id !== id)
@@ -352,7 +339,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         if (e.key === "Escape") { setAdding(false); setNewName("") }
                                     }}
                                 />
-                                <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || add.isPending} className="h-8 px-3">
+                                <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || createList.isPending} className="h-8 px-3">
                                     新增
                                 </Button>
                             </div>
@@ -372,7 +359,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                             if (e.key === "Escape") { setEditingId(null); setEditName("") }
                                         }}
                                     />
-                                    <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || update.isPending} className="h-8 px-3">
+                                    <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || renameList.isPending} className="h-8 px-3">
                                         儲存
                                     </Button>
                                 </div>
@@ -386,7 +373,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         <span className={cn("truncate", collapsed && "hidden")}>{c.name}</span>
                                         {!collapsed && (
                                             <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                                {pendingCountByTodoList.get(c.id) ?? 0}
+                                                {counts.get(c.id) ?? 0}
                                             </span>
                                         )}
                                     </SidebarMenuButton>
@@ -403,7 +390,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                                     size="sm"
                                                     className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-50"
                                                     onClick={() => handleDelete(c.id)}
-                                                    disabled={c.id === "work" || remove.isPending}
+                                                    disabled={c.id === "work" || deleteList.isPending}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
