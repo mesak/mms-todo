@@ -3,10 +3,10 @@ import * as Popover from "@radix-ui/react-popover"
 import { Command } from "cmdk"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { cn } from "../../lib/utils"
-import type { TodoList } from "../../types/todo"
+export type ListOption = { id: string; name: string }
 
 interface TodoListComboboxProps {
-  todoLists: TodoList[]
+  todoLists: ListOption[]
   selectedTodoListId?: string
   onChange: (todoListId: string) => void
   placeholder?: string

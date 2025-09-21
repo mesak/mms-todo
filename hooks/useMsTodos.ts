@@ -217,6 +217,20 @@ export function useDeleteMsTodoList(token?: string) {
   })
 }
 
+export function useRenameMsTodoList(token?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ listId, displayName }: { listId: string; displayName: string }) => {
+      assertToken(token)
+      await graphFetch<void>(`/me/todo/lists/${listId}`, token!, {
+        method: "PATCH",
+        body: JSON.stringify({ displayName })
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() })
+  })
+}
+
 // -------------------------
 // Hooks: Tasks
 // -------------------------

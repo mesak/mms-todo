@@ -2,13 +2,15 @@ import * as React from "react"
 import "./styles/globals.css"
 import { Providers } from "./providers"
 import { Separator } from "./components/ui/separator"
-import { useTodoLists, useTodoTasks } from "./hooks/useTodos"
+// import { useTodoLists, useTodoTasks } from "./hooks/useTodos"
 import { AppSidebar } from "./components/sidepanel/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "./components/ui/sidebar"
 import { TodoList } from "./ui/TodoList"
 import { Menu, X } from "lucide-react"
 import { Button } from "./components/ui/button"
 import { useSettings } from "./hooks/useSettings"
+import { useAuth } from "./hooks/useAuth"
+import { useMsTodoLists } from "./hooks/useMsTodos"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
 const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
@@ -21,7 +23,8 @@ export default function IndexSidePanel() {
 }
 
 function SidePanelShell() {
-    const { data: todoLists = [], isLoading } = useTodoLists()
+    const { token } = useAuth()
+    const { data: msLists = [], isLoading } = useMsTodoLists(token)
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
@@ -29,12 +32,12 @@ function SidePanelShell() {
     // Ensure a valid selected todo list when lists load or change
     React.useEffect(() => {
         if (isLoading) return
-        if (todoLists.length === 0) return
-        const exists = todoLists.some((l) => l.id === selectedTodoListId)
+        if (msLists.length === 0) return
+        const exists = msLists.some((l) => l.id === selectedTodoListId)
         if (!exists) {
-            setSelectedTodoListId(todoLists[0].id)
+            setSelectedTodoListId(msLists[0].id)
         }
-    }, [todoLists, isLoading, selectedTodoListId])
+    }, [msLists, isLoading, selectedTodoListId])
 
     return (
         <div
@@ -96,7 +99,7 @@ function SidePanelShell() {
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
                                     <AppSidebar 
-                                        todoLists={todoLists} 
+                                        todoLists={msLists.map(l => ({ id: l.id, name: l.displayName, createdAt: Date.now() }))} 
                                         selectedTodoListId={selectedTodoListId} 
                                         onSelectTodoList={setSelectedTodoListId}
                                         isOverlay={true}

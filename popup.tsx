@@ -6,16 +6,22 @@ import "./styles/globals.css"
 import { TodoList } from "./ui/TodoList"
 import { Tooltip } from "./components/ui/tooltip"
 import { TodoListCombobox } from "./components/ui/todolist-combobox"
-import { useTodoLists } from "./hooks/useTodos"
+// import { useTodoLists } from "./hooks/useTodos"
 import { useSettings } from "./hooks/useSettings"
 import { useAuth } from "./hooks/useAuth"
-import { useMsMe } from "./hooks/useMsTodos"
+import { useMsMe, useMsTodoLists } from "./hooks/useMsTodos"
 
 function PopupContent() {
-    const { isLoggedIn, isLoading, login } = useAuth()
-    const [selectedTodoListId, setSelectedTodoListId] = React.useState("work")
-    const { data: todoLists = [] } = useTodoLists()
+    const { isLoggedIn, isLoading, login, token } = useAuth()
+    const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
+    const { data: msLists = [] } = useMsTodoLists(token)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
+
+    React.useEffect(() => {
+        if (!selectedTodoListId && msLists.length > 0) {
+            setSelectedTodoListId(msLists[0].id)
+        }
+    }, [msLists, selectedTodoListId])
 
     const openSidePanel = () => {
         // 使用更簡單的方式開啟側邊面板
@@ -51,14 +57,14 @@ function PopupContent() {
 
     return (
         <div
-            className="w-[360px] min-h-[500px] max-w-[360px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
+            className="w-[420px] min-h-[500px] max-w-[420px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
             style={{ fontFamily: fontFamily, ['--ui-font-size' as any]: `${uiFontSize}px`, ['--todo-item-font-size' as any]: `${itemFontSize}px` }}
         >
             <div className="p-3 space-y-3 w-full max-w-full box-border">
                 <div className="flex items-center justify-between gap-2 w-full max-w-full">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                         <TodoListCombobox
-                            todoLists={todoLists}
+                            todoLists={msLists.map((l) => ({ id: l.id, name: l.displayName }))}
                             selectedTodoListId={selectedTodoListId}
                             onChange={setSelectedTodoListId}
                         />
