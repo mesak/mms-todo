@@ -30,6 +30,13 @@ function PopupContent() {
             <div className="p-3 space-y-3 w-full max-w-full box-border">
                 <div className="flex items-center justify-between gap-2 w-full max-w-full">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <TodoListCombobox
+                            todoLists={todoLists}
+                            selectedTodoListId={selectedTodoListId}
+                            onChange={setSelectedTodoListId}
+                        />
+                    </div>
+                    <div className="flex items-center gap-1">
                         <Tooltip content="設定">
                             <button
                                 onClick={() => chrome.runtime.openOptionsPage?.()}
@@ -40,20 +47,15 @@ function PopupContent() {
                                 <Settings2 className="h-4 w-4" />
                             </button>
                         </Tooltip>
-                        <TodoListCombobox
-                            todoLists={todoLists}
-                            selectedTodoListId={selectedTodoListId}
-                            onChange={setSelectedTodoListId}
-                        />
+                        <Tooltip content="開啟側邊面板">
+                            <button
+                                onClick={openSidePanel}
+                                className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
+                            >
+                                <PanelRightOpen className="h-4 w-4" />
+                            </button>
+                        </Tooltip>
                     </div>
-                    <Tooltip content="開啟側邊面板">
-                        <button
-                            onClick={openSidePanel}
-                            className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
-                        >
-                            <PanelRightOpen className="h-4 w-4" />
-                        </button>
-                    </Tooltip>
                 </div>
                 <div className="w-full max-w-full overflow-hidden">
                     <TodoList selectedTodoListId={selectedTodoListId} hideCompleted listLabel="未完成任務" iconOnlyActions />

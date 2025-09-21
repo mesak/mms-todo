@@ -149,7 +149,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
-                  className="group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent"
+                  className={`group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent ${iconOnlyActions ? "relative" : ""}`}
                 >
                   <Checkbox
                     checked={t.completed}
@@ -192,8 +192,13 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     )}
                   </motion.div>
                   {iconOnlyActions ? (
-                    // POPUP 模式：hover 時顯示刪除按鈕
-                    <motion.div layout className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
+                    // POPUP 模式：hover 時顯示刪除按鈕（絕對定位，不佔用水平空間）
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto"
+                    >
                       <Tooltip content="刪除任務">
                         <Button
                           variant="ghost"

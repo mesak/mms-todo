@@ -1,6 +1,6 @@
 {
   "name": "mms-todo",
-  "displayName": "Mms todo",
+  "displayName": "mms-todo",
   "version": "0.0.1",
   "description": "mesak microsoft to do",
   "author": "mesakey@gmail.com",
@@ -61,6 +61,16 @@
     },
     "action": {
       "default_popup": "popup.html"
-    }
+    },
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "assets/*"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
+      }
+    ]
   }
 }

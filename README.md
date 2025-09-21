@@ -1,4 +1,4 @@
-# MMS TODO（Chrome 擴充功能）
+# mms-todo（Chrome 擴充功能）
 
 一個簡潔的待辦清單 Chrome 擴充功能。支援類別管理、在 Popup 及 Side Panel 中操作待辦、以及簡單的設定頁。資料儲存在 `chrome.storage.local`，離線可用。
 

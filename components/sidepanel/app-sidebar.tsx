@@ -21,6 +21,8 @@ import { cn } from "../../lib/utils"
 import { useTodoLists, useTodoTasks } from "../../hooks/useTodos"
 import { Button } from "../ui/button"
 import { Tooltip } from "../ui/tooltip"
+// Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
+const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
 export type NavKey = "todoTasks" | "todoLists"
 
@@ -50,8 +52,8 @@ export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, is
         <Sidebar collapsible="icon" className={cn("bg-background")}>
             <SidebarHeader>
                 <div className="flex items-center gap-2">
-                    <img src="/assets/icon.png" alt="icon" className="size-6" />
-                    <span className="text-sm font-semibold">MMS TODO</span>
+                    <img src={logoUrl} alt="icon" className="size-6" />
+                    <span className="text-sm font-semibold">mms-todo</span>
                 </div>
             </SidebarHeader>
             <SidebarContent>

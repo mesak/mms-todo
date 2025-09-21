@@ -9,6 +9,8 @@ import { TodoList } from "./ui/TodoList"
 import { Menu, X } from "lucide-react"
 import { Button } from "./components/ui/button"
 import { useSettings } from "./hooks/useSettings"
+// Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
+const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
 export default function IndexSidePanel() {
     return (
@@ -42,8 +44,8 @@ function SidePanelShell() {
             {/* Top Navbar */}
             <nav className="h-12 bg-background border-b border-border flex items-center justify-between px-4 shrink-0 z-50">
                 <div className="flex items-center gap-2">
-                    <img src="/assets/icon.png" alt="MMS TODO" className="size-6" />
-                    <span className="text-lg font-semibold">MMS TODO</span>
+                    <img src={logoUrl} alt="MMS TODO" className="size-6" />
+                    <span className="text-lg font-semibold">mms-todo</span>
                 </div>
                 <Button
                     variant="ghost"
