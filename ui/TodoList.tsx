@@ -163,7 +163,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     checked={t.status === "completed"}
                     onCheckedChange={makeToggleStatus(t.id, t.status)}
                     disabled={updateTask.isPending}
-                    className="mt-0.5 shrink-0"
+                    className="self-center shrink-0"
                   />
                   <motion.div layout className="flex-1 min-w-0">
                     <motion.div

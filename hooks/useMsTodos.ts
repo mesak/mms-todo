@@ -279,11 +279,42 @@ export function useUpdateMsTask(token?: string) {
         body: JSON.stringify(patch)
       })
     },
+    onMutate: async (vars) => {
+      // Cancel outgoing fetches to avoid race conditions
+      await qc.cancelQueries({ queryKey: msq.tasks(vars.listId) })
+      await qc.cancelQueries({ queryKey: msq.task(vars.listId, vars.taskId) })
+
+      // Snapshot previous values
+      const prevList = qc.getQueryData<TodoTask[]>(msq.tasks(vars.listId))
+      const prevTask = qc.getQueryData<TodoTask>(msq.task(vars.listId, vars.taskId))
+
+      // Optimistically update the list cache
+      if (prevList) {
+        const nextList = prevList.map(t => t.id === vars.taskId ? { ...t, ...vars.patch } : t)
+        qc.setQueryData(msq.tasks(vars.listId), nextList)
+      }
+      // Optimistically update the detail cache
+      if (prevTask) {
+        qc.setQueryData(msq.task(vars.listId, vars.taskId), { ...prevTask, ...vars.patch })
+      }
+
+      return { prevList, prevTask }
+    },
+    onError: (error, vars, ctx) => {
+      // Rollback on error
+      if (ctx?.prevList) qc.setQueryData(msq.tasks(vars.listId), ctx.prevList)
+      if (ctx?.prevTask) qc.setQueryData(msq.task(vars.listId, vars.taskId), ctx.prevTask)
+      emitGraphErrorToast(error, "更新任務失敗")
+    },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
       qc.invalidateQueries({ queryKey: msq.task(vars.listId, vars.taskId) })
     },
-    onError: (error) => emitGraphErrorToast(error, "更新任務失敗")
+    onSettled: (_d, _e, vars) => {
+      // Ensure server truth is fetched
+      qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
+      qc.invalidateQueries({ queryKey: msq.task(vars.listId, vars.taskId) })
+    }
   })
 }
 
