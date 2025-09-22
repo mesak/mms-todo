@@ -10,6 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { emitToast } from "../components/ui/toast"
+import { GRAPH_BASE, graphFetch } from "../lib/msgraph"
 import * as React from "react"
 
 // -------------------------
@@ -94,28 +95,8 @@ export type CreateReferenceAttachmentInput = {
 // Helpers
 // -------------------------
 
-const GRAPH_BASE = "https://graph.microsoft.com/v1.0"
-
 function assertToken(token?: string): asserts token is string {
   if (!token) throw new Error("Microsoft Graph access token is required")
-}
-
-async function graphFetch<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${GRAPH_BASE}${path}`, {
-    ...init,
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init?.headers || {})
-    }
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(`Graph error ${res.status}: ${text}`)
-  }
-  // Some Graph endpoints may return 204 No Content
-  if (res.status === 204) return undefined as unknown as T
-  return res.json() as Promise<T>
 }
 
 // Simple paginator to collect all pages. For large data, prefer useInfiniteQuery below.

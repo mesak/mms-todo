@@ -45,6 +45,22 @@ if (storage) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  React.useEffect(() => {
+    function onMessage(msg: any) {
+      if (msg && msg.action === "account_changed") {
+        // Clear all cached queries to avoid cross-account mixing
+        globalClient.clear()
+      }
+    }
+    try {
+      chrome.runtime.onMessage.addListener(onMessage)
+      return () => {
+        chrome.runtime.onMessage.removeListener(onMessage)
+      }
+    } catch {
+      // non-extension environment
+    }
+  }, [])
   return (
     <QueryClientProvider client={globalClient}>
       <ToasterProvider>
