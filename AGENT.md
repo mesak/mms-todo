@@ -1,116 +1,92 @@
-# AGENT 指南（維護者/自動化代理）
+# AGENT 指南 (v2 - MS Graph API)
 
-本文件面向維護者與自動化代理（Agent）。內容包含架構總覽、資料契約、狀態流、關鍵慣例與修改指南，協助你在不破壞既有功能的前提下安全地擴充此專案。
+本文件旨在協助維護者與自動化代理（Agent）快速理解此專案的 **Microsoft Graph API 整合版本**。內容涵蓋了當前的架構、認證流程、資料管理、關鍵慣例與修改指南。
+
+**核心變更**：本專案已從 `chrome.storage.local` 儲存待辦事項，遷移至完全由 **Microsoft To Do** 作為後端，透過 MS Graph API 進行資料同步。
 
 ## 專案宗旨
-- 瀏覽器擴充功能（Chrome，MV3），提供簡潔的待辦清單（Todo）與類別管理。
-- 介面包含 Popup、Side Panel 與 Options 頁。
-- 全部資料儲存在 `chrome.storage.local`，不依賴雲端後端。
+- 一個與 Microsoft To Do 即時同步的瀏覽器擴充功能（Chrome MV3）。
+- 使用者透過 Microsoft 帳號登入後，即可在擴充功能中管理他們的待辦清單與任務。
+- 提供 Popup、Side Panel、Options 等多個介面，方便快速存取。
 
-## 技術棧與核心套件
-- React 18、TypeScript 5
-- Plasmo（打包/產生 MV3 入口）
-- TanStack React Query（快取與資料同步）
-- Tailwind CSS + shadcn 風格 UI 組件 + Radix UI
+## 技術棧
+- React 18, TypeScript 5
+- **Microsoft Graph API**: 作為核心後端服務。
+- **TanStack React Query v5**: 用於非同步狀態管理（伺服器狀態快取、同步）。
+- **Plasmo**: 用於建構與打包 Chrome MV3 擴充功能。
+- **`chrome.identity.launchWebAuthFlow`**: 用於處理 OAuth 2.0 PKCE 認證流程。
+- Tailwind CSS + shadcn/ui: 用於 UI 設計。
 
-## 重要入口與組件
-- `popup.tsx`：彈出視窗入口。可選取類別並新增/檢視 Todo，含「開啟側邊面板」按鈕。
-- `sidepanel.tsx`：側邊面板入口。左側為類別清單（可新增/重新命名/刪除），右側為 Todo 清單。
-- `options.tsx`：擴充功能設定頁（目前示範儲存 username）。
-- `providers.tsx`：建立全域 `QueryClient` 並以 `QueryClientProvider` 包裹應用。
-// 已移除：`hooks/useTodos.ts`（local storage 版本）
-- `ui/TodoList.tsx`：Todo 清單的主要 UI 與互動。
-- `components/ui/*` 與 `components/sidepanel/*`：UI 原子元件與側邊欄骨架。
+## 核心檔案與架構概覽
 
-## 資料模型（契約）
-檔案：`types/todo.ts`
+```
+/
+├── hooks/
+│   ├── useAuth.ts          # 【認證核心】處理使用者登入、登出、Token 刷新。
+│   └── useMsTodos.ts       # 【資料核心】提供所有 MS Graph ToDo 相關的 React Query Hooks。
+├── lib/
+│   └── msgraph.ts          # 提供基礎的 `graphFetch` 函式，用於呼叫 Graph API。
+├── background.ts           # 背景腳本，主要用於接收訊息、顯示通知、處理登入後的帳號設定。
+├── popup.tsx               # Popup 介面，顯示登入按鈕或任務列表。
+├── sidepanel.tsx           # Side Panel 介面，顯示完整的清單與任務管理。
+├── providers.tsx           # 提供全域的 React Query `QueryClient`。
+└── package.json            # 包含 `manifest` 相關設定，如 client_id, scopes 等。
+```
 
-- Category
-  - `id: string`
-  - `name: string`
-  - `color?: string`
-  - `createdAt: number`
+## 身份驗證流程 (OAuth 2.0 + PKCE)
 
-- Todo
-  - `id: string`
-  - `title: string`
-  - `completed: boolean`
-  - `categoryId: string`
-  - `createdAt: number`
+1.  **觸發點**：使用者在 UI (例如 `popup.tsx`) 中點擊「登入」按鈕。
+2.  **核心邏輯**：`hooks/useAuth.ts` 中的 `login` 函式被呼叫。
+3.  **手動 PKCE 流程**：
+    - `useAuth` 會產生 `code_verifier` 和 `code_challenge`。
+    - 構造包含 `client_id`, `scope`, `redirect_uri`, `code_challenge` 的授權 URL。
+    - 呼叫 `chrome.identity.launchWebAuthFlow`，彈出 Microsoft 登入視窗。
+4.  **Token 交換**：使用者授權後，`launchWebAuthFlow` 的回呼會返回授權碼 (`code`)。`useAuth` 接著用此 `code` 和 `code_verifier` 向 Microsoft 的 `/token` 端點交換 `access_token` 和 `refresh_token`。
+5.  **儲存 Token**：取得的 Tokens 被安全地儲存在 `chrome.storage.local` 的 `auth.ms` 鍵中。
+6.  **Token 刷新**：`useAuth` Hook 會在 Token 即將過期時，自動使用 `refresh_token` 進行靜默刷新。若刷新失敗，則會清除認證狀態，要求使用者重新登入。
 
-注意：
-- 類別在初始載入時，若不存在，會自動建立預設類別：`{ id: "work", name: "工作" }`。
-- 預設類別 `work` 不能被刪除。
+## 資料管理 (React Query + MS Graph)
 
-## 儲存鍵值（chrome.storage.local）
-- `todos`：Todo[]
-- `categories`：Category[]
-- `settings`：Options 頁設定（目前僅 `{ username }`）
-- `sidebarCollapsed`：布林值，記錄側邊欄收合狀態（`components/ui/sidebar.tsx`）
+- **資料來源**：所有待辦清單 (Task List) 和任務 (Task) 都來自 MS Graph API。本地不再儲存這些資料，僅快取。
+- **Hooks**：`hooks/useMsTodos.ts` 提供了所有與資料互動的 Hooks (例如 `useMsTodoLists`, `useMsTasks`, `useCreateMsTask` 等)。
+- **查詢鍵 (Query Keys)**：所有 Graph 相關的查詢鍵都定義在 `useMsTodos.ts` 的 `msq` 物件中，格式為 `["msgraph", "lists"]` 或 `["msgraph", "tasks", listId]`。
+- **狀態更新**：所有建立、更新、刪除操作都透過 `useMutation` Hooks 進行。成功後，會自動使用 `queryClient.invalidateQueries` 來使相關的快取失效，觸發 UI 自動更新。
 
-## React Query 使用慣例
-- 查詢鍵（Query Keys）
-  - Todos：`["todos", selectedCategoryId]`（若未指定類別，回傳所有 Todos）
-  - Categories：`["categories"]`
-- 變更（Mutations）完成後一律 `invalidateQueries`：
-  - Todos 相關變更：`invalidateQueries({ queryKey: ["todos"] })`
-  - Categories 相關變更：`invalidateQueries({ queryKey: ["categories"] })`
+## 儲存鍵值 (`chrome.storage.local`)
 
-## 使用者流程與邏輯
-- Popup：
-  - 可切換「類別」與新增 Todo。
-  - 可點擊按鈕開啟 Side Panel：`chrome.sidePanel.open({ tabId })`。
-- Side Panel：
-  - 左側清單可新增/重新命名/刪除類別（`work` 例外）。
-  - 刪除類別時，若該類別仍有未完成 Todo，會先 `confirm` 提示。
-  - 右側為 TodoList，可新增/完成/刪除。
-- Options：
-  - 存取 `settings.username`。
-
-## 邊界條件與注意事項
-- `crypto.randomUUID()` 用於產生 ID。需在 MV3 環境執行（Chrome 支援）。
-- 刪除類別時的連動：
-  - 類別刪除後，該類別下的 Todos 會逐一刪除（呼叫 `removeTodo.mutate`）。
-  - 若刪除的是當前選取類別，會切換到剩餘第一個類別（如存在）。
-- 初次載入無類別時會自動建立 `work`；UI 預設選取 `work`。
-- 文案目前為繁體中文（未導入 i18n）。
-
-## 程式風格
-- 使用 Prettier 3 與 `@ianvs/prettier-plugin-sort-imports`（見 `.prettierrc.mjs`）。
-- Tailwind 以 `cn`（`lib/utils.ts`）合併 class。
-- 請避免在 UI 元件中進行與儲存層強耦合的邏輯；存取儲存層請透過 hooks。
+- `auth.ms`: `AuthState` 物件，包含 `accessToken`, `refreshToken`, `expiresAt`。由 `useAuth.ts` 管理。
+- `ms_account`: `MeProfile` 物件，包含登入使用者的基本資訊 (`id`, `displayName`, `upn`)。由 `background.ts` 在登入成功後寫入。
+- `sidebarCollapsed`: 布林值，單純的 UI 狀態。
 
 ## 常見修改場景與指引
-1) 新增 Todo 欄位（例如 `dueDate`）
-- 更新 `types/todo.ts`。
-// 已移除：`hooks/useTodos.ts` 新增/更新相關說明
-- 調整 `ui/TodoList.tsx` 與相關顯示/輸入。
 
-2) 新增類別屬性（例如 `color`）
-// 已移除：`hooks/useTodos.ts` 相關流程
-- 在側邊欄顯示該屬性（`components/sidepanel/app-sidebar.tsx`）。
+#### 1. 新增一個 Graph API 的權限 (Scope)
 
-3) 調整 Query Key 或快取策略
-- 若變更 Query Key，務必同步 `invalidateQueries` 的 key。
-- 若改變 `staleTime`/`refetchOnWindowFocus` 等行為，請於 `providers.tsx` 統一設定。
+- **步驟 1**: 在 `package.json` 的 `manifest.oauth2.scopes` 陣列中新增權限。
+- **步驟 2**: 在 `hooks/useAuth.ts` 的 `login` 和 `refreshAccessToken` 函式內的 `scope` 變數中同步新增該權限。
+- **步驟 3**: 清除 `chrome.storage.local` 中的 `auth.ms`，讓使用者重新登入以獲取包含新權限的 Token。
 
-4) 新增新頁面/內容腳本
-- 依 Plasmo 規範在專案根目錄新增對應檔案（例如 `content.ts`、`newpage.tsx`），Plasmo 會自動產出對應 entry。
+#### 2. 擴充 `TodoTask` 型別 (例如需要 `priority` 欄位)
 
-5) 錯誤處理/回饋
-- 目前 mutation error 僅在 console 紀錄。若要導入 UI 通知，建議封裝一個 Toast/HUD 元件並在 hooks 的 `onError` 或呼叫端處理。
+- **步驟 1**: 在 `hooks/useMsTodos.ts` 的 `TodoTask` 型別定義中，新增 `priority?: "low" | "normal" | "high"`。
+- **步驟 2**: 在 `useCreateMsTask` 和 `useUpdateMsTask` 的 `patch` 物件中，允許傳入 `priority`。
+- **步驟 3**: 在相關的 UI 元件 (例如 `TodoList.tsx`) 中，讀取並顯示 `priority` 資訊，或提供修改的介面。
 
-## 發佈與 CI
-- 本地：`pnpm package` 會輸出 ZIP 檔至 `build/chrome-mv3-prod.zip`。
-- GitHub Actions：`.github/workflows/submit.yml` 使用 `PlasmoHQ/bpp@v3`，需要在 repo secrets 設定 `SUBMIT_KEYS`。
-- CI 目前使用 Node 16（`setup-node@v3`），本機開發建議 Node 18+ 亦可，但請確保與 CI 行為一致。
+#### 3. 呼叫一個新的 Graph API 端點
 
-## 待辦清單（可由 Agent 自動化）
-- [ ] 加入基本測試與型別檢查流程（例如 `tsc --noEmit` CI step）。
-- [ ] 加入 UI 通知（Toast）以改善使用者回饋。
-- [ ] 匯入/匯出資料（JSON）功能。
-- [ ] 可選深色主題切換。
-- [ ] i18n 架構。
+- **步驟 1**: 在 `lib/msgraph.ts` 中新增一個新的 `fetch` 函式 (如果需要特殊處理)。
+- **步驟 2**: 在 `hooks/useMsTodos.ts` 中，建立一個新的 React Query Hook (`useQuery` 或 `useMutation`)。
+    - 定義新的 Query Key。
+    - 使用 `graphFetch` 函式並傳入 `token`。
+    - 在 `mutation` 的 `onSuccess` 回呼中，記得要讓相關的 Query Keys 失效。
 
----
-若要進行非向後相容的更動，請在 PR 中清楚標註破壞性改動與遷移步驟。
+## 錯誤處理
+- `hooks/useMsTodos.ts` 中的 `mutation` Hooks 已設定 `onError` 回呼，會使用 `emitToast` 顯示錯誤通知。
+- `hooks/useAuth.ts` 中的認證錯誤會被 `console.error` 捕捉，並拋出異常，需要 UI 層來處理。
+
+## 待辦清單 (可由 Agent 自動化)
+- [ ] 針對 `useAuth` 和 `useMsTodos` 建立單元測試。
+- [ ] 當 Token 刷新失敗時，除了清除認證外，應在 UI 上給予更明確的提示。
+- [ ] 實現登出功能，並確保所有使用者相關的快取和儲存都被清除。
+- [ ] 支援帳號切換。
+- [ ] i18n 國際化。
