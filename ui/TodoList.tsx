@@ -165,7 +165,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     disabled={updateTask.isPending}
                     className="self-center shrink-0"
                   />
-                  <motion.div layout className="flex-1 min-w-0">
+                  <motion.div layout className="flex-1 min-w-0 self-center">
                     <motion.div
                       layout
                       className={`break-words whitespace-pre-wrap ${t.status === "completed" ? "line-through text-muted-foreground" : ""}`}
