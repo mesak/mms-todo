@@ -149,7 +149,9 @@ export function useAuth() {
     const login = React.useCallback(async () => {
         // IMPORTANT: Ensure this redirect URL is registered in your Azure App's Redirect URIs:
         // e.g. https://<extension-id>.chromiumapp.org/
-    const redirectUri = chrome.identity.getRedirectURL()
+        // Use a fixed path segment to match Azure AD redirect URI registration
+        // const redirectUri = chrome.identity.getRedirectURL("oauth2")
+        const redirectUri = chrome.identity.getRedirectURL()
 
         // Microsoft OAuth 2.0 authorize endpoint (v2):
         const authorizeEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
@@ -167,7 +169,7 @@ export function useAuth() {
         const codeVerifier = generateRandomString(64);
         const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
         const state = generateRandomString(16)
-        
+
         const url = new URL(authorizeEndpoint)
         url.searchParams.set("client_id", clientId)
         url.searchParams.set("response_type", "code")
@@ -176,9 +178,15 @@ export function useAuth() {
         url.searchParams.set("code_challenge", codeChallenge)
         url.searchParams.set("code_challenge_method", "S256")
         url.searchParams.set("state", state)
-    console.log('auth url', url.toString())
+        // console.log('auth url', url.toString())
 
-        const resultUrl = await chrome.identity.launchWebAuthFlow({ url: url.toString(), interactive: true })
+        let resultUrl: string | undefined
+        try {
+            resultUrl = await chrome.identity.launchWebAuthFlow({ url: url.toString(), interactive: true })
+        } catch (e) {
+            console.error("launchWebAuthFlow failed", e)
+            throw e
+        }
         if (!resultUrl) throw new Error("No redirect URL returned from auth flow")
 
         const parsed = new URL(resultUrl)
@@ -193,13 +201,24 @@ export function useAuth() {
         if (error) throw new Error(`${error}: ${errorDescription ?? ""}`)
         if (!code) throw new Error("No authorization code returned")
 
-        const token = await exchangeCodeForToken(code, codeVerifier, redirectUri)
+        let token: { access_token: string; refresh_token?: string; expires_in: number }
+        try {
+            token = await exchangeCodeForToken(code, codeVerifier, redirectUri)
+        } catch (e) {
+            console.error("exchangeCodeForToken failed", e)
+            throw e
+        }
         const next: AuthState = {
             accessToken: token.access_token,
             refreshToken: token.refresh_token,
             expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000
         }
         await setAuth(next)
+        // Inform background with the fresh token so it can resolve /me, set ms_account,
+        // clear user-scoped data on account change, and broadcast to UIs.
+        try {
+            await chrome.runtime.sendMessage({ action: "login_completed_with_token", access_token: token.access_token })
+        } catch { }
     }, [])
 
     const logout = React.useCallback(async () => {

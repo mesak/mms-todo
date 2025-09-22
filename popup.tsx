@@ -10,6 +10,7 @@ import { TodoListCombobox } from "./components/ui/todolist-combobox"
 import { useSettings } from "./hooks/useSettings"
 import { useAuth } from "./hooks/useAuth"
 import { useMsMe, useMsTodoLists } from "./hooks/useMsTodos"
+import { debounce } from "./lib/utils"
 
 function PopupContent() {
     const { isLoggedIn, isLoading, login, token } = useAuth()
@@ -23,14 +24,17 @@ function PopupContent() {
         }
     }, [msLists, selectedTodoListId])
 
-    const openSidePanel = () => {
+    const openSidePanel = React.useMemo(() => debounce(() => {
         // 使用更簡單的方式開啟側邊面板
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0]?.id) {
                 chrome.sidePanel.open({ tabId: tabs[0].id })
             }
         })
-    }
+    }, 500, true, false), [])
+
+    const onLoginClick = React.useMemo(() => debounce(() => { login() }, 800, true, false), [login])
+    const openOptionsPage = React.useMemo(() => debounce(() => chrome.runtime.openOptionsPage?.(), 500, true, false), [])
 
     if (isLoading) {
         return (
@@ -45,7 +49,7 @@ function PopupContent() {
             <div className="w-[360px] min-h-[500px] bg-background text-foreground flex flex-col items-center justify-center gap-4">
                 <div className="text-base font-medium">請先登入 Microsoft 帳號</div>
                 <button
-                    onClick={login}
+                    onClick={onLoginClick}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 transition"
                 >
                     <LogIn className="h-4 w-4" />
@@ -73,7 +77,7 @@ function PopupContent() {
                         <UserIndicator />
                         <Tooltip content="設定">
                             <button
-                                onClick={() => chrome.runtime.openOptionsPage?.()}
+                                onClick={openOptionsPage}
                                 className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
                                 aria-label="開啟設定"
                                 title="開啟設定"
@@ -105,6 +109,10 @@ function UserIndicator() {
     const name = me?.displayName || me?.userPrincipalName || me?.mail || "使用者"
     const email = me?.mail || me?.userPrincipalName
     const [open, setOpen] = React.useState(false)
+    const onLogout = React.useMemo(() => debounce(async () => {
+        await logout()
+        setOpen(false)
+    }, 600, true, false), [logout])
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Popover.Trigger asChild>
@@ -130,10 +138,7 @@ function UserIndicator() {
                     <div className="h-px bg-border my-1" />
                     <button
                         className="w-full text-left px-2 py-2 rounded hover:bg-accent"
-                        onClick={async () => {
-                            await logout()
-                            setOpen(false)
-                        }}
+                        onClick={onLogout}
                     >
                         登出
                     </button>

@@ -44,6 +44,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
           const changed = !prev || prev.id !== newAccount.id
           // Always store current account
           chrome.storage.local.set({ ms_account: newAccount }, () => {
+            // Notify login success with resolved identity
+            const who = newAccount.displayName || newAccount.upn || newAccount.id
+            createBasicNotification("登入成功", `已成功登入 Microsoft 帳號：${who}`)
             if (changed) {
               // Clear user-scoped caches in local storage
               chrome.storage.local.remove(["todos", "categories"], () => {

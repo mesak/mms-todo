@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button"
 import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText, ClipboardList } from "lucide-react"
 import { Checkbox } from "../components/ui/checkbox"
 import { Tooltip } from "../components/ui/tooltip"
+import { debounce } from "../lib/utils"
 
 interface TodoTaskListProps {
   selectedTodoListId: string
@@ -71,16 +72,18 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
     }
   }, [globalExpanded, visibleTodoTasks, isMultiline])
 
-  const onAdd = React.useCallback(() => {
-    if (!title.trim()) return
+  const onAdd = React.useMemo(() => debounce(() => {
+    const val = title.trim()
+    if (!val) return
+    if (createTask.isPending) return
     createTask.mutate(
-      { listId: selectedTodoListId, task: { title: title.trim() } },
+      { listId: selectedTodoListId, task: { title: val } },
       {
         onSuccess: () => setTitle(""),
         onError: (error) => console.error("Failed to add todo:", error)
       }
     )
-  }, [title, selectedTodoListId, createTask])
+  }, 400, true, false), [title, selectedTodoListId, createTask])
 
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -92,6 +95,10 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   const handleChange = React.useCallback((value: string) => {
     setTitle(value)
   }, [])
+
+  const makeToggleStatus = React.useCallback((tId: string, status?: string) => debounce(() => updateTask.mutate({ listId: selectedTodoListId, taskId: tId, patch: { status: status === "completed" ? "notStarted" : "completed" } }), 250, true, false), [selectedTodoListId, updateTask])
+
+  const makeDelete = React.useCallback((tId: string) => debounce(() => deleteTask.mutate({ listId: selectedTodoListId, taskId: tId }), 250, true, false), [selectedTodoListId, deleteTask])
 
   return (
     <div className="space-y-3 w-full max-w-full overflow-hidden">
@@ -154,7 +161,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                 >
                   <Checkbox
                     checked={t.status === "completed"}
-                    onCheckedChange={() => updateTask.mutate({ listId: selectedTodoListId, taskId: t.id, patch: { status: t.status === "completed" ? "notStarted" : "completed" } })}
+                    onCheckedChange={makeToggleStatus(t.id, t.status)}
                     disabled={updateTask.isPending}
                     className="mt-0.5 shrink-0"
                   />
@@ -204,7 +211,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deleteTask.mutate({ listId: selectedTodoListId, taskId: t.id })}
+                          onClick={makeDelete(t.id)}
                           disabled={deleteTask.isPending}
                           className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
                         >
@@ -218,7 +225,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteTask.mutate({ listId: selectedTodoListId, taskId: t.id })}
+                        onClick={makeDelete(t.id)}
                         disabled={deleteTask.isPending}
                         className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
                       >
