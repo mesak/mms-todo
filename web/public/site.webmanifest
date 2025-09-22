@@ -1,0 +1,31 @@
+{
+  "name": "mms-todo",
+  "short_name": "mms-todo",
+  "description": "一個與 Microsoft To Do 完美同步的現代化 Chrome 擴充功能",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/static/mms-todo-logo500x500.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/mms-todo-logo540x540.png",
+      "sizes": "540x540",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "zh-TW",
+  "orientation": "portrait-primary"
+}
