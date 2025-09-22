@@ -131,3 +131,56 @@
 - `background.js`: `getAuthCode`、`exchangeCodeForToken`、`refreshAccessToken`、`getValidAccessToken`
 - `popup.js`: 登录触发、状态切换、发送消息
 - `manifest.json`: oauth2 配置与权限、host 权限
+
+---
+
+## 九、登录成功提示通知（新增）
+
+目的：在用户成功登录（换取到 access_token）后，使用 `chrome.notifications` 展示「登录成功」的系统通知。
+
+前置条件：
+- `manifest` 必须包含 `notifications` 权限（已配置）
+- MV3 背景脚本已启用（Plasmo 下为根目录 `background.ts`/`background.js`）
+
+实现方式（两种选一）：
+
+1) 背景脚本内直接创建通知（登录逻辑就在背景脚本时推荐）
+
+```ts
+// background.ts (示例)
+function notifyLoginSuccess(username?: string) {
+  chrome.notifications.create("login-success-" + Date.now(), {
+    type: "basic",
+    iconUrl: chrome.runtime.getURL("assets/icon.png"),
+    title: "登入成功",
+    message: username ? `已成功登入 Microsoft 帐号：${username}` : "已成功登入 Microsoft 帐号",
+    priority: 2
+  })
+}
+
+async function exchangeCodeForToken(code: string) {
+  // ...调用 token 接口并成功获取 access_token 后：
+  await chrome.storage.local.set({ access_token, refresh_token, expires_at })
+  // 触发成功通知：
+  notifyLoginSuccess(profile?.displayName)
+}
+```
+
+2) 从 UI/其他上下文通过 runtime 消息请求背景脚本创建通知（已内置监听器）
+
+```ts
+// lib/notifications.ts 已提供封装
+import { notifyLoginSuccess } from "../lib/notifications"
+
+// 登录成功后（无论在 popup 或 content），可直接调用：
+notifyLoginSuccess(userDisplayName)
+
+// 背景脚本 background.ts 已监听：
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.action === "notify_login_success") {
+    // 创建通知
+  }
+})
+```
+
+推荐做法：若登录流程在背景脚本完成，使用方式(1) 最简；若登录在 UI 侧、仅拿到结果，需要背景协助发通知，则使用方式(2)。
