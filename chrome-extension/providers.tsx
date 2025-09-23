@@ -47,15 +47,30 @@ if (storage) {
 export function Providers({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     function onMessage(msg: any) {
-      if (msg && msg.action === "account_changed") {
+      if (msg?.action === "account_changed") {
         // Clear all cached queries to avoid cross-account mixing
         globalClient.clear()
       }
+      if (msg?.action === "rq_invalidate" && Array.isArray(msg.targets)) {
+        // Targeted invalidation across contexts (popup/sidepanel/options)
+        for (const t of msg.targets as Array<any>) {
+          if (t?.type === "lists") {
+            globalClient.invalidateQueries({ queryKey: ["msgraph", "lists"] })
+          } else if (t?.type === "tasks" && t.listId) {
+            globalClient.invalidateQueries({ queryKey: ["msgraph", "tasks", t.listId] })
+          } else if (t?.type === "task" && t.listId && t.taskId) {
+            globalClient.invalidateQueries({ queryKey: ["msgraph", "task", t.listId, t.taskId] })
+          } else if (t?.type === "attachments" && t.listId && t.taskId) {
+            globalClient.invalidateQueries({ queryKey: ["msgraph", "attachments", t.listId, t.taskId] })
+          }
+        }
+      }
     }
     try {
-      chrome.runtime.onMessage.addListener(onMessage)
+      const c: any = (globalThis as any).chrome
+      c?.runtime?.onMessage?.addListener?.(onMessage)
       return () => {
-        chrome.runtime.onMessage.removeListener(onMessage)
+        c?.runtime?.onMessage?.removeListener?.(onMessage)
       }
     } catch {
       // non-extension environment

@@ -128,3 +128,32 @@ pnpm package
 ---
 
 進階維護與擴充請參考 `AGENT.md`。
+
+## Auth 統一驗證元件（AuthGate）
+
+為了統一管理登入/驗證流程與提示畫面，已新增 `components/ui/auth-gate.tsx` 元件，並已套用到 `popup.tsx` 與 `sidepanel.tsx`。
+
+- 功能：
+  - 自動顯示三種狀態畫面：載入中、刷新 Token 中、未登入（附登入按鈕）
+  - 已登入時，直接渲染子內容（children）
+  - 可傳入既有的 `useAuth()` 物件，避免重複呼叫
+
+- 基本用法：
+  ```tsx
+  import AuthGate from "./components/ui/auth-gate"
+  import { useAuth } from "./hooks/useAuth"
+
+  function MyPage() {
+    const auth = useAuth()
+    return (
+      <AuthGate auth={auth}>
+        {/* 已登入才會看到的內容 */}
+        <MainApp />
+      </AuthGate>
+    )
+  }
+  ```
+
+- 備註：
+  - 如未傳入 `auth`，`AuthGate` 會自行呼叫 `useAuth()`。
+  - 可用 `size="sm"` 顯示較緊湊的登入提示畫面，或用 `loginTitle` 自訂文案。

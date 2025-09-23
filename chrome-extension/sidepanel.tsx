@@ -6,12 +6,13 @@ import { Separator } from "./components/ui/separator"
 import { AppSidebar } from "./components/sidepanel/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "./components/ui/sidebar"
 import { TodoList } from "./ui/TodoList"
-import { Menu, X, LogIn } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { Button } from "./components/ui/button"
 import { useSettings } from "./hooks/useSettings"
 import { useAuth } from "./hooks/useAuth"
 import { useMsTodoLists } from "./hooks/useMsTodos"
 import { debounce } from "./lib/utils"
+import AuthGate from "./components/ui/auth-gate"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
 const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
@@ -24,13 +25,14 @@ export default function IndexSidePanel() {
 }
 
 function SidePanelShell() {
-    const { token, isLoggedIn, isLoading, login } = useAuth()
+    const auth = useAuth()
+    const { token, isLoggedIn } = auth
     const { data: msLists = [], isLoading: listsLoading } = useMsTodoLists(token)
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
 
-    const onLoginClick = React.useMemo(() => debounce(() => { login() }, 800, true, false), [login])
+    // login handled by AuthGate when logged out
 
     // Ensure a valid selected todo list when lists load or change
     React.useEffect(() => {
@@ -69,19 +71,7 @@ function SidePanelShell() {
             <div className="flex-1 flex relative min-h-0 h-full">
                 {/* Main Content */}
                 <main className="flex-1 p-1 h-full">
-                    {isLoading ? (
-                        <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-                            載入中...
-                        </div>
-                    ) : !isLoggedIn ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-                            <div className="text-base font-medium">請先登入 Microsoft 帳號</div>
-                            <Button onClick={onLoginClick} className="inline-flex items-center gap-2">
-                                <LogIn className="h-4 w-4" />
-                                登入
-                            </Button>
-                        </div>
-                    ) : (
+                    <AuthGate auth={auth}>
                         <div className="space-y-4 h-full">
                             <div className="flex items-center justify-between">
                                 <div className="text-lg font-semibold">待辦事項</div>
@@ -91,7 +81,7 @@ function SidePanelShell() {
                                 <TodoList selectedTodoListId={selectedTodoListId} listLabel="任務清單" maxHeight="calc(100vh - 200px)" />
                             </div>
                         </div>
-                    )}
+                    </AuthGate>
                 </main>
 
                 {/* Right Sidebar Overlay */}

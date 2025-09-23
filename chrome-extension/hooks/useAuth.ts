@@ -10,7 +10,7 @@ type AuthState = {
 
 async function getAuth(): Promise<AuthState> {
     return new Promise((resolve) => {
-        chrome.storage.local.get([AUTH_KEY], (res) => {
+        chrome.storage.local.get([AUTH_KEY], (res: any) => {
             resolve((res[AUTH_KEY] as AuthState) ?? {})
         })
     })
@@ -39,13 +39,33 @@ function parseHashParams(hash: string): Record<string, string> {
 export function useAuth() {
     const [auth, setAuthState] = React.useState<AuthState>({})
     const [isLoading, setIsLoading] = React.useState(true)
+    type AuthPhase = "initializing" | "refreshing" | "ready" | "prompt" | "error"
+    type AuthFlowStep = "checking-token" | "checking-refresh-token" | "exchanging-new-token" | "done" | "error"
+    const [phase, setPhase] = React.useState<AuthPhase>("initializing")
+    const [flowStep, setFlowStep] = React.useState<AuthFlowStep | undefined>(undefined)
 
     React.useEffect(() => {
         let mounted = true
+        setPhase("initializing")
+        setFlowStep("checking-token")
         getAuth().then((a) => {
             if (!mounted) return
             setAuthState(a)
             setIsLoading(false)
+            const expired = a.expiresAt ? Date.now() >= a.expiresAt - 30_000 : true
+            const hasValid = !!a.accessToken && !expired
+            if (hasValid) {
+                setPhase("ready")
+                setFlowStep("done")
+                // Clear step indicator shortly after
+                setTimeout(() => setFlowStep(undefined), 600)
+            } else if (!!a.refreshToken) {
+                setPhase("refreshing")
+                setFlowStep("checking-refresh-token")
+            } else {
+                setPhase("prompt")
+                setFlowStep(undefined)
+            }
         })
         const listener: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (changes, area) => {
             if (area !== "local") return
@@ -231,6 +251,8 @@ export function useAuth() {
         async function maybeRefresh() {
             if (auth.refreshToken && (isExpired || !auth.accessToken)) {
                 try {
+                    setPhase("refreshing")
+                    setFlowStep("exchanging-new-token")
                     const t = await refreshAccessToken(auth.refreshToken)
                     if (cancelled) return
                     const next: AuthState = {
@@ -239,9 +261,14 @@ export function useAuth() {
                         expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000
                     }
                     await setAuth(next)
+                    setPhase("ready")
+                    setFlowStep("done")
+                    setTimeout(() => setFlowStep(undefined), 600)
                 } catch (e) {
                     // If refresh fails, clear auth to force re-login
                     await clearAuth()
+                    setPhase("prompt")
+                    setFlowStep("error")
                 }
             }
         }
@@ -255,6 +282,8 @@ export function useAuth() {
         token: isLoggedIn ? auth.accessToken : undefined,
         isLoggedIn,
         isLoading,
+        phase,
+        flowStep,
         login,
         logout
     }
