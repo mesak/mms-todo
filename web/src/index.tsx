@@ -195,6 +195,7 @@ app.get('/', (c) => {
               href="https://chromewebstore.google.com/detail/bmmgffjkialoohecnglopijlaedbpfig" 
               target="_blank"
               rel="noopener noreferrer"
+              title="Chrome Web Store"
               className="inline-flex items-center px-8 py-4 border-2 border-white text-lg font-medium rounded-lg text-blue-600 bg-white hover:bg-blue-50 transition-all duration-200 transform hover:scale-105"
             >
               <svg className="mr-3 w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
@@ -203,14 +204,16 @@ app.get('/', (c) => {
               Chrome Web Store
             </a>
             <a 
-              href="#" 
-              className="inline-flex items-center px-8 py-4 border-2 border-white text-lg font-medium rounded-lg text-white bg-gray-500 cursor-not-allowed opacity-60 transition-all duration-200"
-              title="Edge Store 連結即將推出"
+              href="https://microsoftedge.microsoft.com/addons/detail/mmstodo/lpchebldfhaihkbccoioebbhlnojlmmn" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-8 py-4 border-2 border-white text-lg font-medium rounded-lg text-blue-600 bg-white hover:bg-blue-50 transition-all duration-200 transform hover:scale-105"
+              title="Edge Store"
             >
               <svg className="mr-3 w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
-              Edge Add-ons (即將推出)
+              Edge Add-ons
             </a>
           </div>
         </div>
