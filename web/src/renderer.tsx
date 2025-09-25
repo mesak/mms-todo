@@ -48,7 +48,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <meta name="apple-mobile-web-app-title" content="mms-todo" />
         
         {/* Canonical URL */}
-        <link rel="canonical" href="https://mms-todo.pages.dev" />
+        <link rel="canonical" href="https://mms-todo.wiz.tw" />
         
         {/* DNS Prefetch for Performance */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
