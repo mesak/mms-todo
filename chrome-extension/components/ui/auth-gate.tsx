@@ -39,26 +39,31 @@ export function AuthGate({ children, auth, size = "md", className, loginTitle = 
   const onLoginClick = React.useMemo(() => debounce(() => { a.login?.() }, 800, true, false), [a.login])
 
   const loadingEl = (
-    <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-      載入中...
+    <div className={`w-full h-full min-h-[420px] flex items-center justify-center p-6 ${className ?? ""}`}>
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="relative flex h-4 w-4">
+          <span className="animate-spin inline-flex h-full w-full rounded-full border-2 border-current border-t-transparent"></span>
+        </span>
+        載入中...
+      </div>
     </div>
   )
 
   const refreshingEl = (
-    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <span className="relative flex h-3 w-3">
+    <div className={`w-full h-full min-h-[420px] flex flex-col items-center justify-center gap-4 p-8 ${className ?? ""}`}>
+      <div className="flex items-center gap-3 text-base font-medium text-foreground">
+        <span className="relative flex h-5 w-5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+          <span className="relative inline-flex rounded-full h-5 w-5 bg-primary"></span>
         </span>
         驗證中，請稍候...
       </div>
-      <div className="text-xs text-muted-foreground">
-        {a.flowStep === "checking-token" && "檢查 Token"}
-        {a.flowStep === "checking-refresh-token" && "檢查 Refresh Token"}
-        {a.flowStep === "exchanging-new-token" && "交換新 Token"}
-        {a.flowStep === "done" && "完成"}
-        {a.flowStep === "error" && "出錯，請重新登入"}
+      <div className="text-sm text-muted-foreground text-center bg-muted/50 px-6 py-3 rounded-lg border max-w-sm">
+        {a.flowStep === "checking-token" && "檢查存取權杖..."}
+        {a.flowStep === "checking-refresh-token" && "檢查更新權杖..."}
+        {a.flowStep === "exchanging-new-token" && "交換新的存取權杖..."}
+        {a.flowStep === "done" && "✓ 驗證完成"}
+        {a.flowStep === "error" && "❌ 驗證失敗，請重新登入"}
       </div>
     </div>
   )
