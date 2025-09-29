@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useI18n } from "../../lib/i18n"
 
 export type Toast = {
   id: string
@@ -49,29 +50,30 @@ export function ToasterProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function Toaster({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
+  const { t } = useI18n()
   return (
     <div className="fixed bottom-3 right-3 z-50 flex flex-col gap-2">
-      {toasts.map((t) => (
+      {toasts.map((toastItem) => (
         <div
-          key={t.id}
+          key={toastItem.id}
           className={
             "min-w-[240px] max-w-[360px] rounded-md border p-3 shadow bg-background text-foreground " +
-            (t.variant === "destructive" ? "border-red-500/40 bg-red-500/10" : "") +
-            (t.variant === "success" ? " border-emerald-500/40 bg-emerald-500/10" : "") +
-            (t.variant === "info" ? " border-blue-500/40 bg-blue-500/10" : "")
+            (toastItem.variant === "destructive" ? "border-red-500/40 bg-red-500/10" : "") +
+            (toastItem.variant === "success" ? " border-emerald-500/40 bg-emerald-500/10" : "") +
+            (toastItem.variant === "info" ? " border-blue-500/40 bg-blue-500/10" : "")
           }
         >
           <div className="flex items-start gap-2">
             <div className="flex-1">
-              {t.title ? <div className="font-medium text-sm">{t.title}</div> : null}
-              {t.description ? <div className="text-xs opacity-80 whitespace-pre-wrap break-words">{t.description}</div> : null}
+              {toastItem.title ? <div className="font-medium text-sm">{toastItem.title}</div> : null}
+              {toastItem.description ? <div className="text-xs opacity-80 whitespace-pre-wrap break-words">{toastItem.description}</div> : null}
             </div>
             <button
-              onClick={() => onDismiss(t.id)}
+              onClick={() => onDismiss(toastItem.id)}
               className="text-xs px-1 py-0.5 rounded hover:bg-accent"
-              aria-label="關閉通知"
+              aria-label={t("toast_close_aria_label")}
             >
-              關閉
+              {t("toast_close_button")}
             </button>
           </div>
         </div>

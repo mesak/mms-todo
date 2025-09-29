@@ -8,6 +8,7 @@ import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText
 import { Checkbox } from "../components/ui/checkbox"
 import { Tooltip } from "../components/ui/tooltip"
 import { debounce } from "../lib/utils"
+import { useI18n } from "../lib/i18n"
 
 interface TodoTaskListProps {
   selectedTodoListId: string
@@ -26,6 +27,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   const createTask = useCreateMsTask(token)
   const deleteTask = useDeleteMsTask(token)
   const updateTask = useUpdateMsTask(token)
+  const { t } = useI18n()
 
   // 檢查是否為多行內容
   const isMultiline = React.useCallback((text: string) => {
@@ -104,7 +106,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
     <div className="space-y-3 w-full max-w-full overflow-hidden">
       <div className="w-full max-w-full">
         <ExpandableInput
-          placeholder="新增任務..."
+          placeholder={t("new_task_placeholder")}
           value={title}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -120,7 +122,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
             </span>
           </div>
           {visibleTodoTasks.some(t => isMultiline(t.title)) && (
-            <Tooltip content={globalExpanded ? "全部摺疊" : "全部展開"}>
+            <Tooltip content={globalExpanded ? t("tooltip_collapse_all") : t("tooltip_expand_all")}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -135,23 +137,23 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
       )}
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">載入中...</div>
+        <div className="text-sm text-muted-foreground">{t("loading")}</div>
       ) : visibleTodoTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-muted-foreground py-10">
           <ClipboardList className="h-12 w-12 opacity-60 mb-2" />
-          <div className="text-sm">目前沒有任務</div>
+          <div className="text-sm">{t("no_tasks")}</div>
         </div>
       ) : (
         <ul className="space-y-2 nice-scroll w-full max-w-full" style={{ maxHeight }}>
           <AnimatePresence initial={false}>
-            {visibleTodoTasks.map((t) => {
-              const isMultilineTodo = isMultiline(t.title)
-              const isExpanded = expandedItems.has(t.id)
-              const displayText = isMultilineTodo && !isExpanded ? getFirstLine(t.title) : t.title
+            {visibleTodoTasks.map((task) => {
+              const isMultilineTodo = isMultiline(task.title)
+              const isExpanded = expandedItems.has(task.id)
+              const displayText = isMultilineTodo && !isExpanded ? getFirstLine(task.title) : task.title
 
               return (
                 <motion.li
-                  key={t.id}
+                  key={task.id}
                   layout
                   initial={{ opacity: 0, y: -8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -160,15 +162,15 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                   className={`group flex items-start gap-2 p-2 border rounded-md bg-card w-full max-w-full overflow-hidden hover:bg-accent/30 hover:border-accent ${iconOnlyActions ? "relative" : ""}`}
                 >
                   <Checkbox
-                    checked={t.status === "completed"}
-                    onCheckedChange={makeToggleStatus(t.id, t.status)}
+                    checked={task.status === "completed"}
+                    onCheckedChange={makeToggleStatus(task.id, task.status)}
                     disabled={updateTask.isPending}
                     className="self-center shrink-0"
                   />
                   <motion.div layout className="flex-1 min-w-0 self-center">
                     <motion.div
                       layout
-                      className={`break-words whitespace-pre-wrap ${t.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                      className={`break-words whitespace-pre-wrap ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}
                       style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
                       transition={{ layout: { duration: 0.2 } }}
                     >
@@ -179,11 +181,11 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => toggleItemExpansion(t.id)}
+                        onClick={() => toggleItemExpansion(task.id)}
                         className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
                       >
                         <ChevronDown className="h-3 w-3" />
-                        顯示完整內容
+                        {t("show_full_content")}
                       </motion.button>
                     )}
                     {isMultilineTodo && isExpanded && (
@@ -191,11 +193,11 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => toggleItemExpansion(t.id)}
+                        onClick={() => toggleItemExpansion(task.id)}
                         className="text-xs text-blue-500 hover:text-blue-600 mt-1 flex items-center gap-1 transition-colors"
                       >
                         <ChevronRight className="h-3 w-3 rotate-90" />
-                        收合
+                        {t("collapse_item")}
                       </motion.button>
                     )}
                   </motion.div>
@@ -204,11 +206,11 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     <div
                       className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto"
                     >
-                      <Tooltip content="刪除任務">
+                      <Tooltip content={t("tooltip_delete_task")}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={makeDelete(t.id)}
+                          onClick={makeDelete(task.id)}
                           disabled={deleteTask.isPending}
                           className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 transition-colors"
                         >
@@ -218,11 +220,11 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     </div>
                   ) : (
                     // SIDEPANEL 模式：一直顯示圖標按鈕
-                    <Tooltip content="刪除任務">
+                    <Tooltip content={t("tooltip_delete_task")}>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={makeDelete(t.id)}
+                        onClick={makeDelete(task.id)}
                         disabled={deleteTask.isPending}
                         className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8 p-0 shrink-0 transition-colors"
                       >

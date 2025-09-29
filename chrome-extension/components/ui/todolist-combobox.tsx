@@ -3,6 +3,7 @@ import * as Popover from "@radix-ui/react-popover"
 import { Command } from "cmdk"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useI18n } from "../../lib/i18n"
 export type ListOption = { id: string; name: string }
 
 interface TodoListComboboxProps {
@@ -18,12 +19,14 @@ export function TodoListCombobox({
   todoLists,
   selectedTodoListId,
   onChange,
-  placeholder = "選擇清單...",
+  placeholder,
   className,
   size = "default"
 }: TodoListComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const selected = todoLists.find((t) => t.id === selectedTodoListId)
+  const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t("select_list_placeholder")
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -38,14 +41,14 @@ export function TodoListCombobox({
             className
           )}
         >
-          <span className={cn(!selected && "text-muted-foreground")}>{selected ? selected.name : placeholder}</span>
+          <span className={cn(!selected && "text-muted-foreground")}>{selected ? selected.name : resolvedPlaceholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content sideOffset={8} className="z-50 w-[260px] rounded-md border bg-popover p-2 shadow-md outline-none">
           <Command className="bg-transparent">
-            <Command.Input placeholder="搜尋清單..." className="w-full px-2 py-1 text-sm border border-input rounded bg-background" />
+            <Command.Input placeholder={t("search_lists_placeholder")} className="w-full px-2 py-1 text-sm border border-input rounded bg-background" />
             <div className="max-h-[50vh] overflow-y-auto">
               {todoLists.map((t) => (
                 <button

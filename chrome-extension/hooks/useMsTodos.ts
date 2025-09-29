@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tansta
 import { emitToast } from "../components/ui/toast"
 import { notifyRQInvalidate } from "../lib/notifications"
 import { GRAPH_BASE, graphFetch } from "../lib/msgraph"
+import { MessageKey, useI18n } from "../lib/i18n"
 import * as React from "react"
 
 // -------------------------
@@ -174,6 +175,7 @@ export function useMsTodoLists(token?: string, opts?: { enabled?: boolean; colle
 
 export function useCreateMsTodoList(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async (payload: { displayName: string }) => {
       assertToken(token)
@@ -186,12 +188,13 @@ export function useCreateMsTodoList(token?: string) {
       qc.invalidateQueries({ queryKey: msq.lists() })
       notifyRQInvalidate([{ type: "lists" }])
     },
-    onError: (error) => emitGraphErrorToast(error, "新增清單失敗")
+    onError: (error) => showGraphError(error, "toast_create_list_error_title")
   })
 }
 
 export function useDeleteMsTodoList(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async (listId: string) => {
       assertToken(token)
@@ -203,12 +206,13 @@ export function useDeleteMsTodoList(token?: string) {
       qc.invalidateQueries({ queryKey: msq.tasks(listId as any) })
       notifyRQInvalidate([{ type: "lists" }, { type: "tasks", listId }])
     },
-    onError: (error) => emitGraphErrorToast(error, "刪除清單失敗")
+    onError: (error) => showGraphError(error, "toast_delete_list_error_title")
   })
 }
 
 export function useRenameMsTodoList(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, displayName }: { listId: string; displayName: string }) => {
       assertToken(token)
@@ -221,7 +225,7 @@ export function useRenameMsTodoList(token?: string) {
       qc.invalidateQueries({ queryKey: msq.lists() })
       notifyRQInvalidate([{ type: "lists" }])
     },
-    onError: (error) => emitGraphErrorToast(error, "重新命名清單失敗")
+    onError: (error) => showGraphError(error, "toast_rename_list_error_title")
   })
 }
 
@@ -262,6 +266,7 @@ export function useMsTaskDetails(listId?: string, taskId?: string, token?: strin
 
 export function useCreateMsTask(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, task }: { listId: string; task: Partial<TodoTask> & { title: string } }) => {
       assertToken(token)
@@ -274,12 +279,13 @@ export function useCreateMsTask(token?: string) {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
       notifyRQInvalidate([{ type: "tasks", listId: vars.listId }])
     },
-    onError: (error) => emitGraphErrorToast(error, "新增任務失敗")
+    onError: (error) => showGraphError(error, "toast_create_task_error_title")
   })
 }
 
 export function useUpdateMsTask(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, taskId, patch }: { listId: string; taskId: string; patch: Partial<TodoTask> }) => {
       assertToken(token)
@@ -313,7 +319,7 @@ export function useUpdateMsTask(token?: string) {
       // Rollback on error
       if (ctx?.prevList) qc.setQueryData(msq.tasks(vars.listId), ctx.prevList)
       if (ctx?.prevTask) qc.setQueryData(msq.task(vars.listId, vars.taskId), ctx.prevTask)
-      emitGraphErrorToast(error, "更新任務失敗")
+  showGraphError(error, "toast_update_task_error_title")
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
@@ -333,6 +339,7 @@ export function useUpdateMsTask(token?: string) {
 
 export function useDeleteMsTask(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, taskId }: { listId: string; taskId: string }) => {
       assertToken(token)
@@ -342,7 +349,7 @@ export function useDeleteMsTask(token?: string) {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
       notifyRQInvalidate([{ type: "tasks", listId: vars.listId }])
     },
-    onError: (error) => emitGraphErrorToast(error, "刪除任務失敗")
+    onError: (error) => showGraphError(error, "toast_delete_task_error_title")
   })
 }
 
@@ -367,6 +374,7 @@ export function useMsTaskAttachments(listId?: string, taskId?: string, token?: s
 // Add a small file attachment (<= 3MB) as fileAttachment using base64 content.
 export function useAddMsTaskFileAttachment(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, taskId, name, contentBytes, contentType }: { listId: string; taskId: string; name: string; contentBytes: string; contentType?: string }) => {
       assertToken(token)
@@ -385,13 +393,14 @@ export function useAddMsTaskFileAttachment(token?: string) {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
       notifyRQInvalidate([{ type: "attachments", listId: vars.listId, taskId: vars.taskId }])
     },
-    onError: (error) => emitGraphErrorToast(error, "新增附件失敗")
+    onError: (error) => showGraphError(error, "toast_add_file_attachment_error_title")
   })
 }
 
 // Add a reference attachment (link), e.g., to a file in OneDrive/SharePoint.
 export function useAddMsTaskReferenceAttachment(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, taskId, name, sourceUrl, providerType }: { listId: string; taskId: string; name: string; sourceUrl: string; providerType?: string }) => {
       assertToken(token)
@@ -410,12 +419,13 @@ export function useAddMsTaskReferenceAttachment(token?: string) {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
       notifyRQInvalidate([{ type: "attachments", listId: vars.listId, taskId: vars.taskId }])
     },
-    onError: (error) => emitGraphErrorToast(error, "新增連結附件失敗")
+    onError: (error) => showGraphError(error, "toast_add_link_attachment_error_title")
   })
 }
 
 export function useDeleteMsTaskAttachment(token?: string) {
   const qc = useQueryClient()
+  const showGraphError = useGraphErrorToast()
   return useMutation({
     mutationFn: async ({ listId, taskId, attachmentId }: { listId: string; taskId: string; attachmentId: string }) => {
       assertToken(token)
@@ -424,7 +434,7 @@ export function useDeleteMsTaskAttachment(token?: string) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
     },
-    onError: (error) => emitGraphErrorToast(error, "刪除附件失敗")
+    onError: (error) => showGraphError(error, "toast_delete_attachment_error_title")
   })
 }
 
@@ -449,7 +459,17 @@ export function useInfiniteMsTasks(listId?: string, token?: string, opts?: { ena
 }
 
 // ----- helpers -----
-function emitGraphErrorToast(error: unknown, title: string) {
+const useGraphErrorToast = () => {
+  const { t } = useI18n()
+  return React.useCallback(
+    (error: unknown, key: MessageKey) => {
+      emitGraphErrorToastRaw(error, t(key))
+    },
+    [t]
+  )
+}
+
+function emitGraphErrorToastRaw(error: unknown, title: string) {
   let description = ""
   if (typeof error === "string") description = error
   else if (error instanceof Error) description = error.message

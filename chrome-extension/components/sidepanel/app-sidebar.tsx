@@ -23,6 +23,7 @@ import { useAuth } from "../../hooks/useAuth"
 import { useMsTodoLists, useCreateMsTodoList, useDeleteMsTodoList, useRenameMsTodoList, usePendingCountsCache } from "../../hooks/useMsTodos"
 import { Button } from "../ui/button"
 import { Tooltip } from "../ui/tooltip"
+import { useI18n, type TranslateFunction } from "../../lib/i18n"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
 const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
@@ -36,6 +37,7 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, isOverlay = false }: AppSidebarProps) {
+    const { t } = useI18n()
     if (isOverlay) {
         return (
             <div className="h-full">
@@ -44,6 +46,7 @@ export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, is
                         todoLists={todoLists}
                         selectedTodoListId={selectedTodoListId}
                         onSelectTodoList={onSelectTodoList}
+                        t={t}
                     />
                 </div>
             </div>
@@ -63,6 +66,7 @@ export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, is
                     todoLists={todoLists}
                     selectedTodoListId={selectedTodoListId}
                     onSelectTodoList={onSelectTodoList}
+                    t={t}
                 />
             </SidebarContent>
             <SidebarFooter>v1.0</SidebarFooter>
@@ -71,7 +75,7 @@ export function AppSidebar({ todoLists, selectedTodoListId, onSelectTodoList, is
     )
 }
 
-function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
+function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList, t }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void; t: TranslateFunction }) {
     const { token } = useAuth()
     const { /* data: msLists = [] */ } = useMsTodoLists(token)
     const createList = useCreateMsTodoList(token)
@@ -83,7 +87,8 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const counts = usePendingCountsCache(todoLists.map(l => l.id))
+    const listIds = React.useMemo(() => todoLists.map((l) => l.id), [todoLists])
+    const counts = usePendingCountsCache(listIds)
 
     const handleAdd = () => {
         if (!newName.trim()) return
@@ -112,9 +117,9 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-    const incomplete = counts.get(id) ?? 0
+        const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
-            const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
+            const ok = window.confirm(t("confirm_delete_list_with_count", String(incomplete)))
             if (!ok) return
         }
         deleteList.mutate(id, {
@@ -133,14 +138,14 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
             {/* 待辦事項標題 */}
             <div className="flex items-center gap-2 px-3 py-2 rounded-md">
                 <ListTodo className="size-4" />
-                <span>待辦事項</span>
+                <span>{t("tasks")}</span>
             </div>
 
             {/* 類別管理 */}
             <div className="space-y-3">
                 <div className="flex items-center justify-between px-3">
-                    <span className="text-sm font-medium">類別</span>
-                    <Tooltip content={adding ? "取消" : "新增類別"}>
+                    <span className="text-sm font-medium">{t("lists")}</span>
+                    <Tooltip content={adding ? t("tooltip_cancel") : t("tooltip_add_list")}>
                         <Button
                             variant="ghost"
                             size="sm"
@@ -150,7 +155,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                 setNewName("")
                             }}
                         >
-                            {adding ? <span className="text-xs">取消</span> : <Plus className="h-4 w-4" />}
+                            {adding ? <span className="text-xs">{t("cancel")}</span> : <Plus className="h-4 w-4" />}
                         </Button>
                     </Tooltip>
                 </div>
@@ -160,7 +165,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                         <div className="flex items-center gap-2 px-3">
                             <input
                                 className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm"
-                                placeholder="輸入類別名稱..."
+                                placeholder={t("category_name_placeholder")}
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 onKeyDown={(e) => {
@@ -169,7 +174,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                 }}
                             />
                             <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || createList.isPending} className="h-8 px-3">
-                                新增
+                                {t("add")}
                             </Button>
                         </div>
                     )}
@@ -189,7 +194,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                         }}
                                     />
                                     <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || renameList.isPending} className="h-8 px-3">
-                                        儲存
+                                        {t("save")}
                                     </Button>
                                 </div>
                             ) : (
@@ -208,12 +213,12 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
                                         </span>
                                     </Button>
                                     <div className="flex items-center gap-1">
-                                        <Tooltip content="重新命名">
+                                        <Tooltip content={t("tooltip_rename")}>
                                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => startEdit(c)}>
                                                 <Edit2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </Tooltip>
-                                        <Tooltip content={c.id === "work" ? "無法刪除預設類別" : "刪除類別"}>
+                                        <Tooltip content={c.id === "work" ? t("tooltip_cannot_delete_default_list") : t("tooltip_delete_list")}>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -235,7 +240,7 @@ function NavMainOverlay({ todoLists, selectedTodoListId, onSelectTodoList }: { t
     )
 }
 
-function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void }) {
+function NavMain({ todoLists, selectedTodoListId, onSelectTodoList, t }: { todoLists: TodoList[]; selectedTodoListId: string; onSelectTodoList: (id: string) => void; t: TranslateFunction }) {
     const { collapsed } = useSidebar()
     const { token } = useAuth()
     const createList = useCreateMsTodoList(token)
@@ -247,7 +252,8 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editName, setEditName] = React.useState("")
 
-    const counts = React.useMemo(() => usePendingCountsCache(todoLists.map(l => l.id)), [todoLists])
+    const listIds = React.useMemo(() => todoLists.map((l) => l.id), [todoLists])
+    const counts = usePendingCountsCache(listIds)
 
     const handleAdd = () => {
         if (!newName.trim()) return
@@ -276,9 +282,9 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
 
     const handleDelete = (id: string) => {
         if (id === "work") return
-    const incomplete = counts.get(id) ?? 0
+        const incomplete = counts.get(id) ?? 0
         if (incomplete > 0) {
-            const ok = window.confirm(`此類別仍有 ${incomplete} 個未完成的任務，確定要刪除嗎？此動作無法復原。`)
+            const ok = window.confirm(t("confirm_delete_list_with_count", String(incomplete)))
             if (!ok) return
         }
         deleteList.mutate(id, {
@@ -296,9 +302,9 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
             <SidebarGroup>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton tooltip="待辦事項">
+                                <SidebarMenuButton tooltip={t("tasks")}>
                             <ListTodo className="size-4" />
-                            <span className={cn(collapsed && "hidden")}>待辦事項</span>
+                                    <span className={cn(collapsed && "hidden")}>{t("tasks")}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -307,9 +313,9 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
             <SidebarGroup>
                 <SidebarGroupLabel>
                     <div className="flex items-center justify-between">
-                        <span>類別</span>
+                                <span>{t("lists")}</span>
                         {!collapsed && (
-                            <Tooltip content={adding ? "取消" : "新增類別"}>
+                                    <Tooltip content={adding ? t("tooltip_cancel") : t("tooltip_add_list")}>
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -319,7 +325,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         setNewName("")
                                     }}
                                 >
-                                    {adding ? <span className="text-xs">取消</span> : <Plus className="h-4 w-4" />}
+                                            {adding ? <span className="text-xs">{t("cancel")}</span> : <Plus className="h-4 w-4" />}
                                 </Button>
                             </Tooltip>
                         )}
@@ -331,7 +337,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                             <div className="flex items-center gap-2 px-1">
                                 <input
                                     className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm"
-                                    placeholder="輸入類別名稱..."
+                                            placeholder={t("category_name_placeholder")}
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     onKeyDown={(e) => {
@@ -339,8 +345,8 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         if (e.key === "Escape") { setAdding(false); setNewName("") }
                                     }}
                                 />
-                                <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || createList.isPending} className="h-8 px-3">
-                                    新增
+                                        <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || createList.isPending} className="h-8 px-3">
+                                            {t("add")}
                                 </Button>
                             </div>
                         </SidebarMenuItem>
@@ -360,7 +366,7 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                         }}
                                     />
                                     <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim() || renameList.isPending} className="h-8 px-3">
-                                        儲存
+                                        {t("save")}
                                     </Button>
                                 </div>
                             ) : (
@@ -379,12 +385,12 @@ function NavMain({ todoLists, selectedTodoListId, onSelectTodoList }: { todoList
                                     </SidebarMenuButton>
                                     {!collapsed && (
                                         <div className="flex items-center gap-1 pr-1">
-                                            <Tooltip content="重新命名">
+                                            <Tooltip content={t("tooltip_rename")}>
                                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => startEdit(c)}>
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </Tooltip>
-                                            <Tooltip content={c.id === "work" ? "無法刪除預設類別" : "刪除類別"}>
+                                            <Tooltip content={c.id === "work" ? t("tooltip_cannot_delete_default_list") : t("tooltip_delete_list")}>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
