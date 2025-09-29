@@ -1,6 +1,11 @@
 import * as React from "react"
 
 const AUTH_KEY = "auth.ms"
+const CLIENT_ID = "c9f320b3-a966-4bb7-8d88-3b51ae7f632f"
+const AUTHORIZE_ENDPOINT = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+const TOKEN_ENDPOINT = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+const DEFAULT_SCOPES = ["Tasks.ReadWrite", "User.Read", "offline_access"] as const
+const SCOPES = DEFAULT_SCOPES.join(" ")
 
 type AuthState = {
     accessToken?: string
@@ -10,7 +15,7 @@ type AuthState = {
 
 async function getAuth(): Promise<AuthState> {
     return new Promise((resolve) => {
-        chrome.storage.local.get([AUTH_KEY], (res) => {
+        chrome.storage.local.get([AUTH_KEY], (res: any) => {
             resolve((res[AUTH_KEY] as AuthState) ?? {})
         })
     })
@@ -39,13 +44,33 @@ function parseHashParams(hash: string): Record<string, string> {
 export function useAuth() {
     const [auth, setAuthState] = React.useState<AuthState>({})
     const [isLoading, setIsLoading] = React.useState(true)
+    type AuthPhase = "initializing" | "refreshing" | "ready" | "prompt" | "error"
+    type AuthFlowStep = "checking-token" | "checking-refresh-token" | "exchanging-new-token" | "done" | "error"
+    const [phase, setPhase] = React.useState<AuthPhase>("initializing")
+    const [flowStep, setFlowStep] = React.useState<AuthFlowStep | undefined>(undefined)
 
     React.useEffect(() => {
         let mounted = true
+        setPhase("initializing")
+        setFlowStep("checking-token")
         getAuth().then((a) => {
             if (!mounted) return
             setAuthState(a)
             setIsLoading(false)
+            const expired = a.expiresAt ? Date.now() >= a.expiresAt - 30_000 : true
+            const hasValid = !!a.accessToken && !expired
+            if (hasValid) {
+                setPhase("ready")
+                setFlowStep("done")
+                // Clear step indicator shortly after
+                setTimeout(() => setFlowStep(undefined), 600)
+            } else if (!!a.refreshToken) {
+                setPhase("refreshing")
+                setFlowStep("checking-refresh-token")
+            } else {
+                setPhase("prompt")
+                setFlowStep(undefined)
+            }
         })
         const listener: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (changes, area) => {
             if (area !== "local") return
@@ -91,18 +116,15 @@ export function useAuth() {
 
 
     async function exchangeCodeForToken(code: string, codeVerifier: string, redirectUri: string) {
-        const tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        const clientId = "c9f320b3-a966-4bb7-8d88-3b51ae7f632f"
-        const scope = ["Tasks.ReadWrite", "User.Read", "offline_access"].join(" ")
         const body = new URLSearchParams({
-            client_id: clientId,
+            client_id: CLIENT_ID,
             grant_type: "authorization_code",
             code,
             redirect_uri: redirectUri,
             code_verifier: codeVerifier,
-            scope
+            scope: SCOPES
         })
-        const res = await fetch(tokenEndpoint, {
+        const res = await fetch(TOKEN_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: body.toString()
@@ -121,16 +143,13 @@ export function useAuth() {
     }
 
     async function refreshAccessToken(refreshToken: string) {
-        const tokenEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        const clientId = "c9f320b3-a966-4bb7-8d88-3b51ae7f632f"
-        const scope = ["Tasks.ReadWrite", "User.Read", "offline_access"].join(" ")
         const body = new URLSearchParams({
-            client_id: clientId,
+            client_id: CLIENT_ID,
             grant_type: "refresh_token",
             refresh_token: refreshToken,
-            scope
+            scope: SCOPES
         })
-        const res = await fetch(tokenEndpoint, {
+        const res = await fetch(TOKEN_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: body.toString()
@@ -153,28 +172,15 @@ export function useAuth() {
         // const redirectUri = chrome.identity.getRedirectURL("oauth2")
         const redirectUri = chrome.identity.getRedirectURL()
 
-        // Microsoft OAuth 2.0 authorize endpoint (v2):
-        const authorizeEndpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
-
-        // Client ID must match your Azure App Registration
-        const clientId = "c9f320b3-a966-4bb7-8d88-3b51ae7f632f"
-
-        // Scopes needed for Microsoft To Do
-        const scope = [
-            "Tasks.ReadWrite",
-            "User.Read",
-            "offline_access"
-        ].join(" ")
-
         const codeVerifier = generateRandomString(64);
         const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
         const state = generateRandomString(16)
 
-        const url = new URL(authorizeEndpoint)
-        url.searchParams.set("client_id", clientId)
+        const url = new URL(AUTHORIZE_ENDPOINT)
+        url.searchParams.set("client_id", CLIENT_ID)
         url.searchParams.set("response_type", "code")
         url.searchParams.set("redirect_uri", redirectUri)
-        url.searchParams.set("scope", scope)
+        url.searchParams.set("scope", SCOPES)
         url.searchParams.set("code_challenge", codeChallenge)
         url.searchParams.set("code_challenge_method", "S256")
         url.searchParams.set("state", state)
@@ -231,6 +237,8 @@ export function useAuth() {
         async function maybeRefresh() {
             if (auth.refreshToken && (isExpired || !auth.accessToken)) {
                 try {
+                    setPhase("refreshing")
+                    setFlowStep("exchanging-new-token")
                     const t = await refreshAccessToken(auth.refreshToken)
                     if (cancelled) return
                     const next: AuthState = {
@@ -239,9 +247,14 @@ export function useAuth() {
                         expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000
                     }
                     await setAuth(next)
+                    setPhase("ready")
+                    setFlowStep("done")
+                    setTimeout(() => setFlowStep(undefined), 600)
                 } catch (e) {
                     // If refresh fails, clear auth to force re-login
                     await clearAuth()
+                    setPhase("prompt")
+                    setFlowStep("error")
                 }
             }
         }
@@ -255,6 +268,8 @@ export function useAuth() {
         token: isLoggedIn ? auth.accessToken : undefined,
         isLoggedIn,
         isLoading,
+        phase,
+        flowStep,
         login,
         logout
     }

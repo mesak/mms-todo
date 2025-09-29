@@ -17,7 +17,7 @@ interface TodoTaskListProps {
   maxHeight?: string
 }
 
-export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "60vh" }: TodoTaskListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "70vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
@@ -201,10 +201,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                   </motion.div>
                   {iconOnlyActions ? (
                     // POPUP 模式：hover 時顯示刪除按鈕（絕對定位，不佔用水平空間）
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
+                    <div
                       className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto"
                     >
                       <Tooltip content="刪除任務">
@@ -218,7 +215,7 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </Tooltip>
-                    </motion.div>
+                    </div>
                   ) : (
                     // SIDEPANEL 模式：一直顯示圖標按鈕
                     <Tooltip content="刪除任務">

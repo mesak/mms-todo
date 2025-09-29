@@ -10,6 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { emitToast } from "../components/ui/toast"
+import { notifyRQInvalidate } from "../lib/notifications"
 import { GRAPH_BASE, graphFetch } from "../lib/msgraph"
 import * as React from "react"
 
@@ -181,7 +182,10 @@ export function useCreateMsTodoList(token?: string) {
         body: JSON.stringify(payload)
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: msq.lists() })
+      notifyRQInvalidate([{ type: "lists" }])
+    },
     onError: (error) => emitGraphErrorToast(error, "新增清單失敗")
   })
 }
@@ -197,6 +201,7 @@ export function useDeleteMsTodoList(token?: string) {
       qc.invalidateQueries({ queryKey: msq.lists() })
       // Invalidate related tasks caches
       qc.invalidateQueries({ queryKey: msq.tasks(listId as any) })
+      notifyRQInvalidate([{ type: "lists" }, { type: "tasks", listId }])
     },
     onError: (error) => emitGraphErrorToast(error, "刪除清單失敗")
   })
@@ -212,7 +217,10 @@ export function useRenameMsTodoList(token?: string) {
         body: JSON.stringify({ displayName })
       })
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: msq.lists() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: msq.lists() })
+      notifyRQInvalidate([{ type: "lists" }])
+    },
     onError: (error) => emitGraphErrorToast(error, "重新命名清單失敗")
   })
 }
@@ -264,6 +272,7 @@ export function useCreateMsTask(token?: string) {
     },
     onSuccess: (_t, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
+      notifyRQInvalidate([{ type: "tasks", listId: vars.listId }])
     },
     onError: (error) => emitGraphErrorToast(error, "新增任務失敗")
   })
@@ -309,6 +318,10 @@ export function useUpdateMsTask(token?: string) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
       qc.invalidateQueries({ queryKey: msq.task(vars.listId, vars.taskId) })
+      notifyRQInvalidate([
+        { type: "tasks", listId: vars.listId },
+        { type: "task", listId: vars.listId, taskId: vars.taskId }
+      ])
     },
     onSettled: (_d, _e, vars) => {
       // Ensure server truth is fetched
@@ -327,6 +340,7 @@ export function useDeleteMsTask(token?: string) {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: msq.tasks(vars.listId) })
+      notifyRQInvalidate([{ type: "tasks", listId: vars.listId }])
     },
     onError: (error) => emitGraphErrorToast(error, "刪除任務失敗")
   })
@@ -369,6 +383,7 @@ export function useAddMsTaskFileAttachment(token?: string) {
     },
     onSuccess: (_a, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
+      notifyRQInvalidate([{ type: "attachments", listId: vars.listId, taskId: vars.taskId }])
     },
     onError: (error) => emitGraphErrorToast(error, "新增附件失敗")
   })
@@ -393,6 +408,7 @@ export function useAddMsTaskReferenceAttachment(token?: string) {
     },
     onSuccess: (_a, vars) => {
       qc.invalidateQueries({ queryKey: msq.attachments(vars.listId, vars.taskId) })
+      notifyRQInvalidate([{ type: "attachments", listId: vars.listId, taskId: vars.taskId }])
     },
     onError: (error) => emitGraphErrorToast(error, "新增連結附件失敗")
   })
