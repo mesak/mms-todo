@@ -1,7 +1,7 @@
 {
   "name": "mms-todo",
   "displayName": "mms-todo",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "mesak microsoft to do",
   "author": "mesakey@gmail.com",
   "scripts": {
