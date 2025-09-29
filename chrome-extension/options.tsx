@@ -7,6 +7,9 @@ import { Button } from "./components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card"
 import { CheckCircle2 } from "lucide-react"
 import { MessageKey, useI18n } from "./lib/i18n"
+import { useAuth } from "./hooks/useAuth"
+import { useMsMe } from "./hooks/useMsTodos"
+import { debounce } from "./lib/utils"
 
 const SETTINGS_KEY = "settings"
 
@@ -62,7 +65,7 @@ const DEFAULTS = {
   customFonts: [] as string[]
 }
 
-export default function IndexOptions() {
+function OptionsContent() {
   const [username, setUsername] = React.useState("")
   const [fontFamily, setFontFamily] = React.useState<string>(DEFAULTS.family)
   const [uiFontSize, setUiFontSize] = React.useState<number>(DEFAULTS.uiFontSize)
@@ -72,6 +75,15 @@ export default function IndexOptions() {
   const [saving, setSaving] = React.useState(false)
   const [toastOpen, setToastOpen] = React.useState(false)
   const { t } = useI18n()
+  const auth = useAuth()
+  const { token, isLoggedIn, isLoading: authLoading, phase, login, logout } = auth
+  const { data: me, isLoading: meLoading, isFetching: meFetching } = useMsMe(token, { enabled: isLoggedIn })
+  const accountLoading = authLoading || phase === "refreshing" || (isLoggedIn && (meLoading || meFetching))
+  const accountName = me?.displayName || me?.userPrincipalName || me?.mail || username || ""
+  const accountEmail = me?.mail || me?.userPrincipalName
+  const accountId = me?.id
+  const handleLogin = React.useMemo(() => debounce(async () => { try { await login?.() } catch (e) { console.error(e) } }, 600, true, false), [login])
+  const handleLogout = React.useMemo(() => debounce(async () => { try { await logout?.() } catch (e) { console.error(e) } }, 600, true, false), [logout])
 
   React.useEffect(() => {
     chrome.storage.local.get([SETTINGS_KEY], (res) => {
@@ -85,6 +97,17 @@ export default function IndexOptions() {
       setCustomFonts(s.font?.customFonts ?? DEFAULTS.customFonts)
     })
   }, [])
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      const fromAccount = me?.displayName || me?.userPrincipalName || me?.mail
+      if (fromAccount && fromAccount !== username) {
+        setUsername(fromAccount)
+      }
+    } else if (!authLoading && username) {
+      setUsername("")
+    }
+  }, [isLoggedIn, me?.displayName, me?.userPrincipalName, me?.mail, authLoading, username])
 
   const save = () => {
     setSaving(true)
@@ -136,7 +159,7 @@ export default function IndexOptions() {
   }
 
   return (
-    <Providers>
+    <>
       <div
         className="p-5 min-w-[360px] max-w-[720px] mx-auto space-y-4 with-ui-scale"
         style={{
@@ -153,10 +176,48 @@ export default function IndexOptions() {
             <CardTitle>{t("general_section_title")}</CardTitle>
             <CardDescription>{t("general_section_description")}</CardDescription>
           </CardHeader>
-          <CardContent className="pt-4 space-y-2">
-            <label className="text-sm">{t("username_label")}</label>
-            <div className="flex gap-2">
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("username_placeholder") ?? undefined} />
+          <CardContent className="pt-4 space-y-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-foreground">{t("account_section_label")}</div>
+              <div className="rounded-md border bg-muted/40 p-3 space-y-3">
+                {accountLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="relative flex h-4 w-4">
+                      <span className="animate-spin inline-flex h-full w-full rounded-full border-2 border-muted-foreground border-t-transparent"></span>
+                    </span>
+                    {t("account_section_loading")}
+                  </div>
+                ) : isLoggedIn ? (
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("account_section_signed_in_as")}</div>
+                      <div className="text-sm font-medium leading-tight break-words">{accountName}</div>
+                      {accountEmail ? (
+                        <div className="text-xs text-muted-foreground leading-tight break-words">{accountEmail}</div>
+                      ) : null}
+                      {accountId ? (
+                        <div className="text-[11px] text-muted-foreground leading-tight break-words">
+                          {t("account_section_account_id_label")}: {accountId}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={handleLogout} disabled={accountLoading}>
+                        {t("sign_out")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground leading-6">{t("account_section_signed_out")}</div>
+                    <Button onClick={handleLogin} disabled={accountLoading}>
+                      <span className="inline-flex items-center gap-2">
+                        {t("sign_in")}
+                      </span>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -290,6 +351,14 @@ export default function IndexOptions() {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+  )
+}
+
+export default function IndexOptions() {
+  return (
+    <Providers>
+      <OptionsContent />
     </Providers>
   )
 }

@@ -18,7 +18,7 @@ interface TodoTaskListProps {
   maxHeight?: string
 }
 
-export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "70vh" }: TodoTaskListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)

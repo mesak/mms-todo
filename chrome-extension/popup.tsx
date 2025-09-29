@@ -43,10 +43,10 @@ function PopupContent() {
 
     return (
         <div
-            className="w-[420px] min-h-[500px] max-w-[420px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
+            className="w-[420px] min-h-[520px] max-w-[420px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
             style={{ fontFamily: fontFamily, ['--ui-font-size' as any]: `${uiFontSize}px`, ['--todo-item-font-size' as any]: `${itemFontSize}px` }}
         >
-            <AuthGate auth={auth} className="min-h-[500px]" size="sm" loginTitle={t("login_prompt")}>
+            <AuthGate auth={auth} className="min-h-[520px]" size="sm" loginTitle={t("login_prompt")}>
                 <div className="p-3 space-y-3 w-full max-w-full box-border">
                     <div className="flex items-center justify-between gap-2 w-full max-w-full">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
