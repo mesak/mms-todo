@@ -3,6 +3,7 @@ import { LogIn } from "lucide-react"
 import { Button } from "./button"
 import { debounce } from "../../lib/utils"
 import { useAuth as useAuthHook } from "../../hooks/useAuth"
+import { useI18n } from "../../lib/i18n"
 
 export type AuthPhase = "initializing" | "refreshing" | "ready" | "prompt" | "error"
 export type AuthFlowStep = "checking-token" | "checking-refresh-token" | "exchanging-new-token" | "done" | "error"
@@ -32,9 +33,11 @@ type AuthGateProps = {
   loginTitle?: string
 }
 
-export function AuthGate({ children, auth, size = "md", className, loginTitle = "請先登入 Microsoft 帳號" }: AuthGateProps) {
+export function AuthGate({ children, auth, size = "md", className, loginTitle }: AuthGateProps) {
   const internal = useAuthHook()
   const a = auth ?? internal
+  const { t } = useI18n()
+  const resolvedLoginTitle = loginTitle ?? t("login_prompt")
 
   const onLoginClick = React.useMemo(() => debounce(() => { a.login?.() }, 800, true, false), [a.login])
 
@@ -44,7 +47,7 @@ export function AuthGate({ children, auth, size = "md", className, loginTitle = 
         <span className="relative flex h-4 w-4">
           <span className="animate-spin inline-flex h-full w-full rounded-full border-2 border-current border-t-transparent"></span>
         </span>
-        載入中...
+        {t("loading")}
       </div>
     </div>
   )
@@ -56,25 +59,25 @@ export function AuthGate({ children, auth, size = "md", className, loginTitle = 
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
           <span className="relative inline-flex rounded-full h-5 w-5 bg-primary"></span>
         </span>
-        驗證中，請稍候...
+        {t("verifying")}
       </div>
       <div className="text-sm text-muted-foreground text-center bg-muted/50 px-6 py-3 rounded-lg border max-w-sm">
-        {a.flowStep === "checking-token" && "檢查存取權杖..."}
-        {a.flowStep === "checking-refresh-token" && "檢查更新權杖..."}
-        {a.flowStep === "exchanging-new-token" && "交換新的存取權杖..."}
-        {a.flowStep === "done" && "✓ 驗證完成"}
-        {a.flowStep === "error" && "❌ 驗證失敗，請重新登入"}
+        {a.flowStep === "checking-token" && t("checking_access_token")}
+        {a.flowStep === "checking-refresh-token" && t("checking_refresh_token")}
+        {a.flowStep === "exchanging-new-token" && t("exchanging_access_token")}
+        {a.flowStep === "done" && t("verification_done")}
+        {a.flowStep === "error" && t("verification_failed")}
       </div>
     </div>
   )
 
   const loggedOutEl = (
     <div className={`w-full h-full min-h-[420px] flex flex-col items-center justify-center gap-4 ${className ?? ""}`}>
-      <div className={size === "sm" ? "text-sm font-medium" : "text-base font-medium"}>{loginTitle}</div>
+      <div className={size === "sm" ? "text-sm font-medium" : "text-base font-medium"}>{resolvedLoginTitle}</div>
       <Button onClick={onLoginClick} className={size === "sm" ? "h-8 px-3" : undefined}>
         <span className="inline-flex items-center gap-2">
           <LogIn className="h-4 w-4" />
-          登入
+          {t("sign_in")}
         </span>
       </Button>
     </div>

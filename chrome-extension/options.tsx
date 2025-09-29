@@ -6,6 +6,7 @@ import { Input } from "./components/ui/input"
 import { Button } from "./components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card"
 import { CheckCircle2 } from "lucide-react"
+import { MessageKey, useI18n } from "./lib/i18n"
 
 const SETTINGS_KEY = "settings"
 
@@ -21,13 +22,37 @@ type Settings = {
   }
 }
 
-const FONT_CHOICES: { label: string; value: string }[] = [
-  { label: "系統預設 (System UI)", value: "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, \"Apple Color Emoji\", \"Segoe UI Emoji\"" },
-  { label: "Noto Sans TC (繁中)", value: "\"Noto Sans TC\", system-ui, -apple-system, Segoe UI, Roboto, \"Microsoft JhengHei\", Helvetica Neue, Arial, sans-serif" },
-  { label: "Noto Serif TC (繁中襯線)", value: "\"Noto Serif TC\", Georgia, Cambria, \"Times New Roman\", Times, serif" },
-  { label: "Inter", value: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif" },
-  { label: "Roboto", value: "Roboto, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" },
-  { label: "Menlo (等寬)", value: "Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace" }
+const FONT_CHOICES: { labelKey: MessageKey; fallbackLabel: string; value: string }[] = [
+  {
+    labelKey: "font_choice_system_ui",
+    fallbackLabel: "System default (System UI)",
+    value: "system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, \"Apple Color Emoji\", \"Segoe UI Emoji\""
+  },
+  {
+    labelKey: "font_choice_noto_sans_tc",
+    fallbackLabel: "Noto Sans TC (Traditional Chinese)",
+    value: "\"Noto Sans TC\", system-ui, -apple-system, Segoe UI, Roboto, \"Microsoft JhengHei\", Helvetica Neue, Arial, sans-serif"
+  },
+  {
+    labelKey: "font_choice_noto_serif_tc",
+    fallbackLabel: "Noto Serif TC (Traditional Chinese serif)",
+    value: "\"Noto Serif TC\", Georgia, Cambria, \"Times New Roman\", Times, serif"
+  },
+  {
+    labelKey: "font_choice_inter",
+    fallbackLabel: "Inter",
+    value: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+  },
+  {
+    labelKey: "font_choice_roboto",
+    fallbackLabel: "Roboto",
+    value: "Roboto, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif"
+  },
+  {
+    labelKey: "font_choice_menlo",
+    fallbackLabel: "Menlo (Monospaced)",
+    value: "Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace"
+  }
 ]
 
 const DEFAULTS = {
@@ -46,6 +71,7 @@ export default function IndexOptions() {
   const [newCustomFont, setNewCustomFont] = React.useState<string>("")
   const [saving, setSaving] = React.useState(false)
   const [toastOpen, setToastOpen] = React.useState(false)
+  const { t } = useI18n()
 
   React.useEffect(() => {
     chrome.storage.local.get([SETTINGS_KEY], (res) => {
@@ -119,18 +145,18 @@ export default function IndexOptions() {
           ["--todo-item-font-size" as any]: `${itemFontSize}px`
         }}
       >
-        <h1 className="text-xl font-semibold">設定</h1>
+        <h1 className="text-xl font-semibold">{t("settings_title")}</h1>
 
         {/* 一般設定 */}
         <Card>
           <CardHeader className="border-b">
-            <CardTitle>一般</CardTitle>
-            <CardDescription>共用的基本設定</CardDescription>
+            <CardTitle>{t("general_section_title")}</CardTitle>
+            <CardDescription>{t("general_section_description")}</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-2">
-            <label className="text-sm">使用者名稱</label>
+            <label className="text-sm">{t("username_label")}</label>
             <div className="flex gap-2">
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="輸入顯示名稱" />
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("username_placeholder") ?? undefined} />
             </div>
           </CardContent>
         </Card>
@@ -138,13 +164,13 @@ export default function IndexOptions() {
         {/* 字體設定 */}
         <Card>
           <CardHeader className="border-b">
-            <CardTitle>字體設定</CardTitle>
-            <CardDescription>調整介面字體與大小（其他項目後續可再新增）</CardDescription>
+            <CardTitle>{t("font_section_title")}</CardTitle>
+            <CardDescription>{t("font_section_description")}</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm">字體家族</label>
+                <label className="text-sm">{t("font_family_label")}</label>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   value={fontFamily}
@@ -152,28 +178,28 @@ export default function IndexOptions() {
                 >
                   {/* 自訂字體（如果有） */}
                   {customFonts.length > 0 && (
-                    <optgroup label="自訂字體">
+                    <optgroup label={t("custom_fonts_group_label")}>
                       {customFonts.map((f) => (
                         <option key={f} value={f}>{f}</option>
                       ))}
                     </optgroup>
                   )}
-                  <optgroup label="預設字體">
+                  <optgroup label={t("default_fonts_group_label")}>
                     {FONT_CHOICES.map((f) => (
-                      <option key={f.value} value={f.value}>{f.label}</option>
+                      <option key={f.value} value={f.value}>{t(f.labelKey) ?? f.fallbackLabel}</option>
                     ))}
                   </optgroup>
                 </select>
                 {/* 新增自訂字體 */}
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">新增自訂字體（進階）</div>
+                  <div className="text-xs text-muted-foreground">{t("custom_font_helper")}</div>
                   <div className="flex gap-2">
                     <Input
                       value={newCustomFont}
                       onChange={(e) => setNewCustomFont(e.target.value)}
-                      placeholder='例如："Noto Sans TC", system-ui, -apple-system, Segoe UI, sans-serif'
+                      placeholder={t("custom_font_placeholder") ?? undefined}
                     />
-                    <Button type="button" onClick={addCustomFont}>新增</Button>
+                    <Button type="button" onClick={addCustomFont}>{t("add_custom_font")}</Button>
                   </div>
                   {customFonts.length > 0 && (
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -181,7 +207,7 @@ export default function IndexOptions() {
                         <button
                           key={f}
                           className="px-2 py-1 rounded border hover:bg-accent"
-                          title="移除自訂字體"
+                          title={t("remove_custom_font")}
                           onClick={() => removeCustomFont(f)}
                         >
                           {f}
@@ -190,7 +216,7 @@ export default function IndexOptions() {
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    注意：這是進階設定，請輸入完整的 CSS font-family 值（包含備援字體與正確引號）。若使用本機未安裝的字體，瀏覽器會退回到備援字體。
+                    {t("custom_font_notice")}
                   </p>
                 </div>
               </div>
@@ -198,7 +224,7 @@ export default function IndexOptions() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="text-sm">介面字體大小（UI）</label>
+                      <label className="text-sm">{t("ui_font_size_label")}</label>
                       <span className="text-xs text-muted-foreground">{uiFontSize}px</span>
                     </div>
                     <input
@@ -213,7 +239,7 @@ export default function IndexOptions() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="text-sm">條目字體大小（Item）</label>
+                      <label className="text-sm">{t("item_font_size_label")}</label>
                       <span className="text-xs text-muted-foreground">{itemFontSize}px</span>
                     </div>
                     <input
@@ -231,18 +257,18 @@ export default function IndexOptions() {
             </div>
 
             <div className="rounded-md border border-dashed p-4 bg-muted/30">
-              <div className="text-xs text-muted-foreground mb-1">預覽</div>
+              <div className="text-xs text-muted-foreground mb-1">{t("preview_label")}</div>
               <div style={{ fontFamily: fontFamily, fontSize: `${uiFontSize}px`, lineHeight: 1.6 }}>
-                介面（UI）示例：中文 English 123 ABC
+                {t("preview_ui_sample")}
               </div>
               <div style={{ fontFamily: fontFamily, fontSize: `${itemFontSize}px`, lineHeight: 1.6 }}>
-                條目（Item）示例：我愛待辦事項 Todo List ✓
+                {t("preview_item_sample")}
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={save} disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button>
-              <Button variant="outline" onClick={resetFont}>還原字體預設</Button>
+              <Button onClick={save} disabled={saving}>{saving ? t("saving") : t("save_action")}</Button>
+              <Button variant="outline" onClick={resetFont}>{t("reset_font_defaults")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -259,7 +285,7 @@ export default function IndexOptions() {
           >
             <div className="rounded-md border bg-card text-card-foreground shadow-md px-3 py-2 text-sm flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              設定已儲存
+              {t("settings_saved_toast")}
             </div>
           </motion.div>
         )}

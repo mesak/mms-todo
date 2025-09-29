@@ -3,6 +3,7 @@ import { PanelLeftOpen, PanelLeftClose } from "lucide-react"
 import { Button } from "./button"
 import { cn } from "../../lib/utils"
 import { Tooltip } from "./tooltip"
+import { useI18n } from "../../lib/i18n"
 
 type SidebarContextType = {
     collapsed: boolean
@@ -56,8 +57,9 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
 export function SidebarTrigger({ className }: { className?: string }) {
     const { collapsed, toggle } = useSidebar()
+    const { t } = useI18n()
     return (
-        <Tooltip content={collapsed ? "展開清單" : "收合清單"}>
+        <Tooltip content={collapsed ? t("tooltip_expand_sidebar") : t("tooltip_collapse_sidebar")}>
             <Button
                 variant="ghost"
                 size="sm"

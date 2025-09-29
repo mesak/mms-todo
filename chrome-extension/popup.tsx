@@ -12,6 +12,7 @@ import { useAuth } from "./hooks/useAuth"
 import { useMsMe, useMsTodoLists } from "./hooks/useMsTodos"
 import { debounce } from "./lib/utils"
 import AuthGate from "./components/ui/auth-gate"
+import { useI18n } from "./lib/i18n"
 
 function PopupContent() {
     const auth = useAuth()
@@ -19,6 +20,7 @@ function PopupContent() {
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
     const { data: msLists = [] } = useMsTodoLists(token)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
+    const { t } = useI18n()
 
     React.useEffect(() => {
         if (!selectedTodoListId && msLists.length > 0) {
@@ -44,7 +46,7 @@ function PopupContent() {
             className="w-[420px] min-h-[500px] max-w-[420px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
             style={{ fontFamily: fontFamily, ['--ui-font-size' as any]: `${uiFontSize}px`, ['--todo-item-font-size' as any]: `${itemFontSize}px` }}
         >
-            <AuthGate auth={auth} className="min-h-[500px]" size="sm" loginTitle="請先登入 Microsoft 帳號">
+            <AuthGate auth={auth} className="min-h-[500px]" size="sm" loginTitle={t("login_prompt")}>
                 <div className="p-3 space-y-3 w-full max-w-full box-border">
                     <div className="flex items-center justify-between gap-2 w-full max-w-full">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -56,17 +58,17 @@ function PopupContent() {
                         </div>
                         <div className="flex items-center gap-1">
                             <UserIndicator />
-                            <Tooltip content="設定">
+                            <Tooltip content={t("tooltip_settings")}>
                                 <button
                                     onClick={openOptionsPage}
                                     className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
-                                    aria-label="開啟設定"
-                                    title="開啟設定"
+                                    aria-label={t("open_settings")}
+                                    title={t("open_settings")}
                                 >
                                     <Settings2 className="h-4 w-4" />
                                 </button>
                             </Tooltip>
-                            <Tooltip content="開啟側邊面板">
+                            <Tooltip content={t("tooltip_open_side_panel")}>
                                 <button
                                     onClick={openSidePanel}
                                     className="p-2 hover:bg-accent rounded-md transition-colors text-foreground shrink-0"
@@ -77,7 +79,7 @@ function PopupContent() {
                         </div>
                     </div>
                     <div className="w-full max-w-full overflow-hidden">
-                        <TodoList selectedTodoListId={selectedTodoListId} hideCompleted listLabel="未完成任務" iconOnlyActions />
+                        <TodoList selectedTodoListId={selectedTodoListId} hideCompleted listLabel={t("list_incomplete_tasks")} iconOnlyActions />
                     </div>
                 </div>
             </AuthGate>
@@ -88,7 +90,8 @@ function PopupContent() {
 function UserIndicator() {
     const { token, logout } = useAuth()
     const { data: me } = useMsMe(token)
-    const name = me?.displayName || me?.userPrincipalName || me?.mail || "使用者"
+    const { t } = useI18n()
+    const name = me?.displayName || me?.userPrincipalName || me?.mail || t("user_placeholder")
     const email = me?.mail || me?.userPrincipalName
     const [open, setOpen] = React.useState(false)
     const onLogout = React.useMemo(() => debounce(async () => {
@@ -112,7 +115,7 @@ function UserIndicator() {
             </Popover.Trigger>
             <Popover.Portal>
                 <Popover.Content side="bottom" align="end" sideOffset={6} className="z-50 w-56 rounded-md border bg-background text-foreground shadow-md p-2">
-                    <div className="px-2 py-1 text-xs text-muted-foreground">已登入</div>
+                    <div className="px-2 py-1 text-xs text-muted-foreground">{t("signed_in")}</div>
                     <div className="px-2 py-1 text-sm font-medium truncate">{name}</div>
                     {email ? (
                         <div className="px-2 pb-2 text-xs text-muted-foreground truncate">{email}</div>
@@ -122,7 +125,7 @@ function UserIndicator() {
                         className="w-full text-left px-2 py-2 rounded hover:bg-accent"
                         onClick={onLogout}
                     >
-                        登出
+                        {t("sign_out")}
                     </button>
                     <Popover.Arrow className="fill-background" />
                 </Popover.Content>

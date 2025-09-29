@@ -3,19 +3,20 @@ import { ToasterProvider, ToastBridgeRegistrar, emitToast } from "./components/u
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import * as React from "react"
+import { t } from "./lib/i18n"
 
 // Create a global QueryClient instance
 const globalClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error)
-      emitToast({ title: "讀取資料失敗", description: message, variant: "destructive" })
+      emitToast({ title: t("toast_fetch_error_title"), description: message, variant: "destructive" })
     }
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error)
-      emitToast({ title: "操作失敗", description: message, variant: "destructive" })
+      emitToast({ title: t("toast_mutation_error_title"), description: message, variant: "destructive" })
     }
   }),
   defaultOptions: {

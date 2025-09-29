@@ -13,6 +13,7 @@ import { useAuth } from "./hooks/useAuth"
 import { useMsTodoLists } from "./hooks/useMsTodos"
 import { debounce } from "./lib/utils"
 import AuthGate from "./components/ui/auth-gate"
+import { useI18n } from "./lib/i18n"
 // Resolve icon from assets for MV3 build (use Plasmo ~assets alias)
 const logoUrl = new URL("~assets/icon.png", import.meta.url).toString()
 
@@ -31,6 +32,7 @@ function SidePanelShell() {
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
+    const { t } = useI18n()
 
     // login handled by AuthGate when logged out
 
@@ -61,6 +63,7 @@ function SidePanelShell() {
                         size="sm"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         className="p-2 h-8 w-8 hover:bg-accent transition-colors"
+                        title={t("list_management")}
                     >
                         <Menu className="h-4 w-4" />
                     </Button>
@@ -74,11 +77,11 @@ function SidePanelShell() {
                     <AuthGate auth={auth}>
                         <div className="space-y-4 h-full">
                             <div className="flex items-center justify-between">
-                                <div className="text-lg font-semibold">待辦事項</div>
+                                <div className="text-lg font-semibold">{t("tasks")}</div>
                             </div>
                             <Separator />
                             <div className="flex-1">
-                                <TodoList selectedTodoListId={selectedTodoListId} listLabel="任務清單" maxHeight="calc(100vh - 200px)" />
+                                <TodoList selectedTodoListId={selectedTodoListId} listLabel={t("task_list")} maxHeight="calc(100vh - 200px)" />
                             </div>
                         </div>
                     </AuthGate>
@@ -96,7 +99,7 @@ function SidePanelShell() {
                         <div className="fixed right-0 top-12 bottom-0 w-80 bg-background border-l border-border shadow-xl z-50 transform transition-transform duration-200 ease-in-out">
                             <div className="h-full flex flex-col">
                                 <div className="p-4 border-b border-border flex items-center justify-between bg-card">
-                                    <span className="font-semibold text-card-foreground">分類管理</span>
+                                    <span className="font-semibold text-card-foreground">{t("list_management")}</span>
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -127,7 +130,7 @@ function SidePanelShell() {
                             size="sm"
                             onClick={() => setSidebarOpen(true)}
                             className="p-2 h-8 w-8 rounded-full shadow-lg bg-background border-border hover:bg-accent transition-colors"
-                            title="開啟分類管理"
+                            title={t("open_list_management")}
                         >
                             <Menu className="h-4 w-4" />
                         </Button>
