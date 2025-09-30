@@ -1,9 +1,14 @@
 import { Hono } from 'hono'
 import { renderer } from './renderer'
+import PrivacyPage from './privacy'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 app.use(renderer)
+
+app.get('/privacy', (c) => {
+  return c.render(<PrivacyPage />)
+})
 
 app.get('/', (c) => {
   return c.render(
@@ -291,8 +296,9 @@ app.get('/', (c) => {
           </div>
           
           <div className="border-t border-gray-700 pt-6">
-            <div className="text-gray-400 text-sm text-center">
-              © 2025 mms-todo. Made with ❤️ for productivity.
+            <div className="text-gray-400 text-sm text-center flex justify-center items-center space-x-4">
+              <span>© 2025 mms-todo. Made with ❤️ for productivity.</span>
+              <a href="/privacy" className="text-gray-400 hover:text-white transition-colors">隱私權政策</a>
             </div>
           </div>
         </div>
