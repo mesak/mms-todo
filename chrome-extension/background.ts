@@ -5,6 +5,110 @@ import { t } from "./lib/i18n"
 import { fetchMe } from "./lib/msgraph"
 
 const ICON_URL = chrome.runtime.getURL("assets/icon.png")
+const AUTH_KEY = "auth.ms"
+const TOKEN_ENDPOINT = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+const CLIENT_ID = "c9f320b3-a966-4bb7-8d88-3b51ae7f632f"
+const DEFAULT_SCOPES = ["Tasks.ReadWrite", "User.Read", "offline_access"] as const
+const SCOPES = DEFAULT_SCOPES.join(" ")
+const TOKEN_REFRESH_ALARM = "token-refresh"
+
+type AuthState = {
+  accessToken?: string
+  expiresAt?: number
+  refreshToken?: string
+}
+
+async function getAuth(): Promise<AuthState> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([AUTH_KEY], (res: any) => {
+      resolve((res[AUTH_KEY] as AuthState) ?? {})
+    })
+  })
+}
+
+async function setAuth(state: AuthState): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [AUTH_KEY]: state }, () => resolve())
+  })
+}
+
+async function refreshAccessToken(refreshToken: string): Promise<{
+  access_token: string
+  refresh_token?: string
+  expires_in: number
+}> {
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    scope: SCOPES
+  })
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString()
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Token refresh failed: ${res.status} ${text}`)
+  }
+  return (await res.json()) as {
+    access_token: string
+    refresh_token?: string
+    expires_in: number
+  }
+}
+
+// Proactively refresh token in background
+async function backgroundRefreshToken() {
+  try {
+    const auth = await getAuth()
+    if (!auth.refreshToken) {
+      console.log("No refresh token available for background refresh")
+      return
+    }
+
+    // Check if token needs refresh (5 minutes before expiry)
+    const needsRefresh = auth.expiresAt ? Date.now() >= auth.expiresAt - 300_000 : true
+    if (!needsRefresh && auth.accessToken) {
+      console.log("Token still valid, skipping background refresh")
+      return
+    }
+
+    console.log("Background token refresh initiated")
+    const tokenResponse = await refreshAccessToken(auth.refreshToken)
+    const next: AuthState = {
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token ?? auth.refreshToken,
+      expiresAt: Date.now() + (tokenResponse.expires_in ?? 3600) * 1000
+    }
+    await setAuth(next)
+    console.log("Background token refresh successful")
+
+    // Notify UI components that token has been refreshed
+    chrome.runtime.sendMessage({ action: "token_refreshed", token: next.accessToken }).catch(() => {})
+  } catch (error) {
+    console.error("Background token refresh failed:", error)
+  }
+}
+
+// Set up periodic token refresh alarm
+chrome.alarms.get(TOKEN_REFRESH_ALARM, (alarm) => {
+  if (!alarm) {
+    // Check and refresh token every 30 minutes
+    chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 30 })
+  }
+})
+
+// Listen for alarm to trigger token refresh
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === TOKEN_REFRESH_ALARM) {
+    backgroundRefreshToken()
+  }
+})
+
+// Also refresh on extension startup
+backgroundRefreshToken()
 
 function createBasicNotification(title: string, message: string) {
   try {

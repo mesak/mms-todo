@@ -142,26 +142,46 @@ export function useAuth() {
         }
     }
 
-    async function refreshAccessToken(refreshToken: string) {
+    async function refreshAccessToken(refreshToken: string, retryCount = 0): Promise<{
+        access_token: string
+        refresh_token?: string
+        expires_in: number
+    }> {
         const body = new URLSearchParams({
             client_id: CLIENT_ID,
             grant_type: "refresh_token",
             refresh_token: refreshToken,
             scope: SCOPES
         })
-        const res = await fetch(TOKEN_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: body.toString()
-        })
-        if (!res.ok) {
-            const text = await res.text()
-            throw new Error(`Token refresh failed: ${res.status} ${text}`)
-        }
-        return (await res.json()) as {
-            access_token: string
-            refresh_token?: string
-            expires_in: number
+        try {
+            const res = await fetch(TOKEN_ENDPOINT, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: body.toString()
+            })
+            if (!res.ok) {
+                const text = await res.text()
+                // Retry on network errors or transient server errors
+                if (retryCount < 2 && (res.status >= 500 || res.status === 429)) {
+                    console.warn(`Token refresh failed with ${res.status}, retrying... (attempt ${retryCount + 1}/3)`)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
+                    return refreshAccessToken(refreshToken, retryCount + 1)
+                }
+                throw new Error(`Token refresh failed: ${res.status} ${text}`)
+            }
+            return (await res.json()) as {
+                access_token: string
+                refresh_token?: string
+                expires_in: number
+            }
+        } catch (err) {
+            // Retry on network errors
+            if (retryCount < 2 && (err instanceof TypeError)) {
+                console.warn(`Token refresh network error, retrying... (attempt ${retryCount + 1}/3)`)
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
+                return refreshAccessToken(refreshToken, retryCount + 1)
+            }
+            throw err
         }
     }
 
@@ -231,9 +251,43 @@ export function useAuth() {
         await clearAuth()
     }, [])
 
+    // Proactively ensure we have a valid token, refreshing if necessary
+    const ensureValidToken = React.useCallback(async (): Promise<string | undefined> => {
+        const current = await getAuth()
+        const expired = current.expiresAt ? Date.now() >= current.expiresAt - 60_000 : true
+        
+        // If we have a valid token, return it
+        if (current.accessToken && !expired) {
+            return current.accessToken
+        }
+        
+        // If we have a refresh token, try to refresh
+        if (current.refreshToken) {
+            try {
+                const t = await refreshAccessToken(current.refreshToken)
+                const next: AuthState = {
+                    accessToken: t.access_token,
+                    refreshToken: t.refresh_token ?? current.refreshToken,
+                    expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000
+                }
+                await setAuth(next)
+                return next.accessToken
+            } catch (e) {
+                console.error("Failed to refresh token in ensureValidToken:", e)
+                // If refresh fails, clear auth
+                await clearAuth()
+                return undefined
+            }
+        }
+        
+        return undefined
+    }, [])
+
     // Attempt silent refresh when token is expired and refresh token exists
     React.useEffect(() => {
         let cancelled = false
+        let refreshTimer: NodeJS.Timeout | undefined
+
         async function maybeRefresh() {
             if (auth.refreshToken && (isExpired || !auth.accessToken)) {
                 try {
@@ -250,7 +304,14 @@ export function useAuth() {
                     setPhase("ready")
                     setFlowStep("done")
                     setTimeout(() => setFlowStep(undefined), 600)
+                    
+                    // Schedule next refresh 5 minutes before expiration
+                    const timeUntilRefresh = Math.max(0, (t.expires_in - 300) * 1000)
+                    refreshTimer = setTimeout(() => {
+                        if (!cancelled) maybeRefresh()
+                    }, timeUntilRefresh)
                 } catch (e) {
+                    console.error("Token refresh failed:", e)
                     // If refresh fails, clear auth to force re-login
                     await clearAuth()
                     setPhase("prompt")
@@ -259,8 +320,10 @@ export function useAuth() {
             }
         }
         maybeRefresh()
+        
         return () => {
             cancelled = true
+            if (refreshTimer) clearTimeout(refreshTimer)
         }
     }, [auth.refreshToken, isExpired])
 
@@ -271,6 +334,7 @@ export function useAuth() {
         phase,
         flowStep,
         login,
-        logout
+        logout,
+        ensureValidToken
     }
 }
