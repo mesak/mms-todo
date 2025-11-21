@@ -345,7 +345,7 @@ export function useAuth() {
                 chrome.runtime.sendMessage({
                     action: "auth_changed",
                     auth: next
-                }).catch(() => {})
+                }).catch(() => { })
             } catch { }
         }, 100)
 
@@ -365,20 +365,32 @@ export function useAuth() {
         // 2. 清除 React Query 緩存（rq-mms-todo）
         localStorage.removeItem("rq-mms-todo")
 
-        // 3. 清除本地 React 狀態
+        // 3. 直接清除 chrome.storage.local（確保完全清除，不依賴訊息傳遞）
+        try {
+            await new Promise<void>((resolve) => {
+                chrome.storage.local.remove(["auth.ms", "ms_account", "todos", "categories"], () => {
+                    console.log("[useAuth] Cleared chrome.storage.local directly")
+                    resolve()
+                })
+            })
+        } catch (e) {
+            console.error("[useAuth] Failed to clear chrome.storage.local:", e)
+        }
+
+        // 4. 清除本地 React 狀態
         console.log("[useAuth] Clearing auth state, setting phase to prompt")
         setAuthState({})
         setPhase("prompt")
         setFlowStep(undefined)
 
-        // 4. 通知 background.ts 執行清除操作
+        // 5. 通知 background.ts 執行清除操作（額外保險）
         try {
             await chrome.runtime.sendMessage({
                 action: "logout_initiated"
             })
         } catch { }
 
-        // 5. 發送 account_changed 消息以觸發所有 Context 的 React Query 緩存清除
+        // 6. 發送 account_changed 消息以觸發所有 Context 的 React Query 緩存清除
         try {
             await chrome.runtime.sendMessage({
                 action: "account_changed",
@@ -386,7 +398,7 @@ export function useAuth() {
             })
         } catch { }
 
-        // 6. 通知其他 Context 清除認證狀態
+        // 7. 通知其他 Context 清除認證狀態
         try {
             await chrome.runtime.sendMessage({
                 action: "logout_completed"

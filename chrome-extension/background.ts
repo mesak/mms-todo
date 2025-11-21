@@ -18,18 +18,36 @@ type AuthState = {
   refreshToken?: string
 }
 
+// ✅ 統一使用 localStorage（與 useAuth.ts 一致）
+function getAuthSync(): AuthState {
+  try {
+    const stored = localStorage.getItem(AUTH_KEY)
+    if (!stored) return {}
+    return JSON.parse(stored)
+  } catch {
+    return {}
+  }
+}
+
+function setAuthSync(state: AuthState): void {
+  try {
+    if (Object.keys(state).length === 0) {
+      localStorage.removeItem(AUTH_KEY)
+    } else {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(state))
+    }
+  } catch (e) {
+    console.error("Failed to save auth to localStorage:", e)
+  }
+}
+
+// 保留異步版本以供相容
 async function getAuth(): Promise<AuthState> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([AUTH_KEY], (res: any) => {
-      resolve((res[AUTH_KEY] as AuthState) ?? {})
-    })
-  })
+  return getAuthSync()
 }
 
 async function setAuth(state: AuthState): Promise<void> {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [AUTH_KEY]: state }, () => resolve())
-  })
+  setAuthSync(state)
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{
@@ -86,7 +104,7 @@ async function backgroundRefreshToken() {
     console.log("Background token refresh successful")
 
     // Notify UI components that token has been refreshed
-    chrome.runtime.sendMessage({ action: "token_refreshed", token: next.accessToken }).catch(() => {})
+    chrome.runtime.sendMessage({ action: "token_refreshed", token: next.accessToken }).catch(() => { })
   } catch (error) {
     console.error("Background token refresh failed:", error)
   }
@@ -141,35 +159,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
     // msg: { access_token }
     const accessToken = (msg as any).access_token as string | undefined
     if (!accessToken) return
-    ;(async () => {
-      try {
-        const me = await fetchMe(accessToken)
-        const newAccount = { id: me.id, upn: me.userPrincipalName, displayName: me.displayName }
-        // Compare with stored account
-        chrome.storage.local.get(["ms_account"], (res) => {
-          const prev = res["ms_account"] as { id?: string } | undefined
-          const changed = !prev || prev.id !== newAccount.id
-          // Always store current account
-          chrome.storage.local.set({ ms_account: newAccount }, () => {
-            // Notify login success with resolved identity
-            const who = newAccount.displayName || newAccount.upn || newAccount.id
-            createBasicNotification(
-              t("notification_login_success_title"),
-              t("notification_login_success_message_named", who)
-            )
-            if (changed) {
-              // Clear user-scoped caches in local storage
-              chrome.storage.local.remove(["todos", "categories"], () => {
-                // Broadcast to UIs to refresh their state
-                chrome.runtime.sendMessage({ action: "account_changed", account: newAccount }).catch(() => {})
-              })
-            }
+      ; (async () => {
+        try {
+          const me = await fetchMe(accessToken)
+          const newAccount = { id: me.id, upn: me.userPrincipalName, displayName: me.displayName }
+          // Compare with stored account
+          chrome.storage.local.get(["ms_account"], (res) => {
+            const prev = res["ms_account"] as { id?: string } | undefined
+            const changed = !prev || prev.id !== newAccount.id
+            // Always store current account
+            chrome.storage.local.set({ ms_account: newAccount }, () => {
+              // Notify login success with resolved identity
+              const who = newAccount.displayName || newAccount.upn || newAccount.id
+              createBasicNotification(
+                t("notification_login_success_title"),
+                t("notification_login_success_message_named", who)
+              )
+              if (changed) {
+                // Clear user-scoped caches in local storage
+                chrome.storage.local.remove(["todos", "categories"], () => {
+                  // Broadcast to UIs to refresh their state
+                  chrome.runtime.sendMessage({ action: "account_changed", account: newAccount }).catch(() => { })
+                })
+              }
+            })
           })
-        })
-      } catch (e) {
-        console.warn("account resolution failed:", e)
-      }
-    })()
+        } catch (e) {
+          console.warn("account resolution failed:", e)
+        }
+      })()
   }
   // ✅ 改進 8: 處理登出操作（background.ts 端）
   if (action === "logout_initiated") {
