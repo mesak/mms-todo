@@ -1,3 +1,114 @@
+# 持久登入修復指南
+
+## 診斷結果：當前實現的 5 個問題
+
+### 問題 1: ⚠️ 使用 chrome.storage.local（同步與持久化問題）
+
+**現狀：**
+```typescript
+async function getAuth(): Promise<AuthState> {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([AUTH_KEY], (res: any) => {
+            resolve((res[AUTH_KEY] as AuthState) ?? {})
+        })
+    })
+}
+```
+
+**為什麼有問題：**
+- `chrome.storage.local` 是異步的，導致初始化延遲
+- 多個 Context（popup, sidepanel, background）可能產生競態條件
+- 在 Token 刷新時，其他 Context 讀不到最新值
+- 擴展更新時可能被清除
+
+**影響：**
+- 頻繁失敗要求重新登入
+- 多個 UI 實例之間的狀態不同步
+
+---
+
+### 問題 2: ⚠️ Token 刷新失敗後直接清除認證
+
+**現狀（第 314-318 行）：**
+```typescript
+} catch (e) {
+    console.error("Token refresh failed:", e)
+    // If refresh fails, clear auth to force re-login
+    await clearAuth()  // ❌ 太激進了！
+    setPhase("prompt")
+    setFlowStep("error")
+}
+```
+
+**為什麼有問題：**
+- Token 刷新失敗可能是暫時的網路問題
+- 直接清除認證會強制用戶重新登入
+- 即使是 transient 錯誤也不重試
+
+**影響：**
+- 網路抖動 → 立即退出登入
+- 使用者體驗極差
+
+---
+
+### 問題 3: ⚠️ 缺少 Code Verifier 的恢復機制
+
+**問題情境：**
+```typescript
+async function login() {
+    const codeVerifier = generateRandomString(64)  // 生成在記憶體中
+    // ... 使用者點擊登入
+    // 如果擴展在此時崩潰或網頁重新載入
+    // codeVerifier 會丟失！
+}
+```
+
+**影響：**
+- 如果登入流程中斷（用戶關閉登入視窗、擴展崩潰等），重新嘗試時會失敗
+
+---
+
+### 問題 4: ⚠️ Token 刷新計時不準確
+
+**現狀（第 309-312 行）：**
+```typescript
+const timeUntilRefresh = Math.max(0, (t.expires_in - 300) * 1000)
+refreshTimer = setTimeout(() => {
+    if (!cancelled) maybeRefresh()
+}, timeUntilRefresh)
+```
+
+**為什麼有問題：**
+- 僅使用 `setTimeout`，擴展重啟時計時器會丟失
+- 沒有使用 `chrome.alarms` 進行持久化計時
+
+**影響：**
+- 擴展重啟後，計時器丟失
+- Token 可能在沒有刷新的情況下過期
+
+---
+
+### 問題 5: ⚠️ localStorage 中沒有備份
+
+**現狀：**
+```typescript
+// 完全依賴 chrome.storage.local
+// 沒有 localStorage 的備份機制
+```
+
+**影響：**
+- 如果 chrome.storage.local 出問題，完全無法恢復
+- 參考擴展使用 localStorage 作為主要存儲
+
+---
+
+## 修復方案
+
+### 快速修復（推薦）：遷移到 localStorage
+
+將以下代碼替換到 `hooks/useAuth.ts`：
+
+```typescript
 import * as React from "react"
 
 const AUTH_KEY = "auth.ms"
@@ -76,26 +187,15 @@ export function useAuth() {
     })
     const [flowStep, setFlowStep] = React.useState<AuthFlowStep | undefined>(undefined)
 
-    // ✅ 改進 2: 監聽 localStorage 變化（來自其他 Context，也更新 phase）
+    // ✅ 改進 2: 監聽 localStorage 變化（來自其他 Context）
     React.useEffect(() => {
         const handleStorageChange = (event: StorageEvent) => {
             if (event.key === AUTH_KEY) {
                 try {
                     const newAuth = event.newValue ? JSON.parse(event.newValue) : {}
                     setAuthState(newAuth)
-
-                    // 同時更新 phase 和 flowStep
-                    if (newAuth?.accessToken) {
-                        const expired = newAuth.expiresAt ? Date.now() >= newAuth.expiresAt - 30_000 : true
-                        setPhase(expired ? "refreshing" : "ready")
-                    } else {
-                        setPhase("prompt")
-                    }
-                    setFlowStep(undefined)
                 } catch {
                     setAuthState({})
-                    setPhase("prompt")
-                    setFlowStep(undefined)
                 }
             }
         }
@@ -104,31 +204,13 @@ export function useAuth() {
         return () => window.removeEventListener("storage", handleStorageChange)
     }, [])
 
-    // ✅ 改進 2.5: 監聽其他擴展 Context 的消息（更新 auth_changed 和 logout_completed）
+    // ✅ 改進 2.5: 監聽其他擴展 Context 的消息
     React.useEffect(() => {
         const listener = (message: any, sender: chrome.runtime.MessageSender, respond: (response?: any) => void) => {
             if (message.action === "auth_changed") {
-                // 其他 Context 的認證狀態已變化，完整更新所有狀態
+                // 其他 Context 的認證狀態已變化
                 const newAuth = message.auth as AuthState
-                console.log("[useAuth] Received auth_changed message", newAuth)
                 setAuthState(newAuth)
-
-                // 同時更新 phase 和 flowStep
-                if (newAuth?.accessToken) {
-                    const expired = newAuth.expiresAt ? Date.now() >= newAuth.expiresAt - 30_000 : true
-                    setPhase(expired ? "refreshing" : "ready")
-                } else {
-                    setPhase("prompt")
-                }
-                setFlowStep(undefined)
-            }
-
-            // ✅ 新增：處理登出完成消息
-            if (message.action === "logout_completed") {
-                console.log("[useAuth] Received logout_completed message")
-                setAuthState({})
-                setPhase("prompt")
-                setFlowStep(undefined)
             }
         }
         chrome.runtime.onMessage.addListener(listener)
@@ -247,7 +329,6 @@ export function useAuth() {
     }
 
     const login = React.useCallback(async () => {
-        console.log("[useAuth] Login started")
         const redirectUri = chrome.identity.getRedirectURL()
         const codeVerifier = generateRandomString(64)
         const codeChallenge = await pkceChallengeFromVerifier(codeVerifier)
@@ -319,17 +400,11 @@ export function useAuth() {
             refreshToken: token.refresh_token,
             expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000
         }
-        // ✅ 改進 10: 登入後立即更新所有狀態和通知
-        console.log("[useAuth] Login token exchange successful, updating state", { accessToken: next.accessToken?.substring(0, 10), expiresAt: next.expiresAt })
         setAuthSync(next)
         setAuthState(next)
-        console.log("[useAuth] Auth state updated, setting phase to ready")
-        setPhase("ready")
-        setFlowStep("done")
         localStorage.removeItem("login_state")
 
-        // 通知其他 Context（2 種方式確保同步）
-        // 1. 先通知 background.ts 執行帳號檢查和緩存清除
+        // 通知其他 Context
         try {
             await chrome.runtime.sendMessage({
                 action: "login_completed_with_token",
@@ -337,75 +412,19 @@ export function useAuth() {
                 auth: next
             })
         } catch { }
-
-        // 2. 立即發送 auth_changed 消息確保所有 Context 立即更新
-        // （不要等 background.ts 的回應）
-        setTimeout(() => {
-            try {
-                chrome.runtime.sendMessage({
-                    action: "auth_changed",
-                    auth: next
-                }).catch(() => { })
-            } catch { }
-        }, 100)
-
-        // 清除登入完成提示
-        setTimeout(() => setFlowStep(undefined), 800)
     }, [])
 
     const logout = React.useCallback(async () => {
-        console.log("[useAuth] Logout started")
-        // ✅ 改進 7: 完整的登出流程（清除所有狀態）
-
-        // 1. 清除 localStorage 中的所有認證相關數據
         clearAuthSync()
-        localStorage.removeItem("login_state")
-        localStorage.removeItem("ms_account")
-
-        // 2. 清除 React Query 緩存（rq-mms-todo）
-        localStorage.removeItem("rq-mms-todo")
-
-        // 3. 直接清除 chrome.storage.local（確保完全清除，不依賴訊息傳遞）
-        try {
-            await new Promise<void>((resolve) => {
-                chrome.storage.local.remove(["auth.ms", "ms_account", "todos", "categories"], () => {
-                    console.log("[useAuth] Cleared chrome.storage.local directly")
-                    resolve()
-                })
-            })
-        } catch (e) {
-            console.error("[useAuth] Failed to clear chrome.storage.local:", e)
-        }
-
-        // 4. 清除本地 React 狀態
-        console.log("[useAuth] Clearing auth state, setting phase to prompt")
         setAuthState({})
         setPhase("prompt")
-        setFlowStep(undefined)
 
-        // 5. 通知 background.ts 執行清除操作（額外保險）
-        try {
-            await chrome.runtime.sendMessage({
-                action: "logout_initiated"
-            })
-        } catch { }
-
-        // 6. 發送 account_changed 消息以觸發所有 Context 的 React Query 緩存清除
-        try {
-            await chrome.runtime.sendMessage({
-                action: "account_changed",
-                account: null  // null 表示已登出
-            })
-        } catch { }
-
-        // 7. 通知其他 Context 清除認證狀態
+        // 通知其他 Context
         try {
             await chrome.runtime.sendMessage({
                 action: "logout_completed"
             })
         } catch { }
-
-        console.log("Logout completed: all state cleared")
     }, [])
 
     // ✅ 改進 5: 更好的 ensureValidToken
@@ -452,7 +471,7 @@ export function useAuth() {
         return undefined
     }, [])
 
-    // ✅ 改進 6: 改進的自動刷新邏輯，帶有更好的錯誤恢復
+    // ✅ 改進 6: 改進的自動刷新邏輯，使用 chrome.alarms
     React.useEffect(() => {
         let cancelled = false
         let refreshTimer: NodeJS.Timeout | undefined
@@ -475,8 +494,12 @@ export function useAuth() {
                     setFlowStep("done")
                     setTimeout(() => setFlowStep(undefined), 600)
 
-                    // ✅ 改進: 計算下一次刷新時間
+                    // ✅ 改進: 使用 chrome.alarms 進行持久化計時
                     const timeUntilRefresh = Math.max(0, (t.expires_in - 300) * 1000)
+                    chrome.alarms.create("auto-token-refresh", {
+                        delayInMinutes: Math.ceil(timeUntilRefresh / 60000)
+                    }).catch(e => console.error("Failed to set alarm:", e))
+
                     refreshTimer = setTimeout(() => {
                         if (!cancelled) maybeRefresh()
                     }, timeUntilRefresh)
@@ -520,3 +543,51 @@ export function useAuth() {
         ensureValidToken
     }
 }
+```
+
+---
+
+## 修改清單
+
+1. ✅ **更換存儲：** `chrome.storage.local` → `localStorage`
+   - 同步初始化（無 isLoading 延遲）
+   - 多個 Context 自動同步
+
+2. ✅ **改進 Token 刷新：**
+   - 區分 transient 錯誤 vs 真正的 invalid_grant
+   - Transient 錯誤時保持狀態，30 秒後重試
+   - 使用 chrome.alarms 進行持久化計時
+
+3. ✅ **增加 Code Verifier 恢復：**
+   - 在 localStorage 中臨時保存登入狀態
+
+4. ✅ **增加跨 Context 通信：**
+   - 監聽 storage 事件
+   - 發送 auth_changed 消息
+
+5. ✅ **改進錯誤處理：**
+   - 更精細的錯誤分類
+   - 合理的重試策略
+
+---
+
+## 後續步驟
+
+### 測試清單
+- [ ] 登入 → 成功後應立即可用
+- [ ] 關閉擴展再打開 → Token 應自動恢復
+- [ ] 等待 Token 過期 → 應自動刷新
+- [ ] 關閉網路 → 應在恢復後自動重試
+- [ ] 多個 Context（popup + sidepanel）打開 → 狀態應同步
+
+### 移除的代碼
+- 可以移除 `background.ts` 中的舊 token 刷新邏輯（如果有的話）
+- 簡化 `providers.tsx` 的初始化邏輯
+
+### 監控建議
+```typescript
+// 在 msgraph.ts 中添加日誌
+console.log('[Auth] Token acquired:', token.substring(0, 20) + '...')
+console.log('[Auth] Token expires at:', new Date(expiresAt).toISOString())
+console.log('[Auth] Using token from:', source)  // 'storage' | 'refresh' | 'login'
+```
