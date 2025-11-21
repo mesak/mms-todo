@@ -29,15 +29,49 @@ function PopupContent() {
         }
     }, [msLists, selectedTodoListId])
 
-    const openSidePanel = React.useMemo(() => debounce(() => {
-        // 使用更簡單的方式開啟側邊面板
+    const openSidePanel = React.useMemo(() => debounce(async () => {
         const c: any = (globalThis as any).chrome
         if (!c?.tabs?.query || !c?.sidePanel?.open) return
-        c.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
-            if (tabs[0]?.id) {
-                c.sidePanel.open({ tabId: tabs[0].id })
+
+        try {
+            // 獲取當前活動標籤
+            const tabs = await new Promise<any[]>((resolve) => {
+                c.tabs.query({ active: true, currentWindow: true }, resolve)
+            })
+
+            if (!tabs[0]?.id) return
+
+            const tabId = tabs[0].id
+
+            // 檢查 SidePanel 是否已打開
+            const options = await c.sidePanel.getOptions({ tabId })
+
+            if (options?.enabled) {
+                // SidePanel 已打開，嘗試切換焦點
+                console.log("[popup] SidePanel already open, attempting to focus")
+
+                // 方法 1: 重新打開 SidePanel（會自動聚焦）
+                await c.sidePanel.open({ tabId })
+
+                // 方法 2: 嘗試更新窗口焦點（備用）
+                const currentWindow = await c.windows.getCurrent()
+                if (currentWindow?.id) {
+                    await c.windows.update(currentWindow.id, { focused: true })
+                }
+            } else {
+                // SidePanel 未打開，正常打開
+                console.log("[popup] Opening SidePanel")
+                await c.sidePanel.open({ tabId })
             }
-        })
+        } catch (error) {
+            console.error("[popup] Failed to open/switch SidePanel:", error)
+            // 回退：簡單打開
+            c.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+                if (tabs[0]?.id) {
+                    c.sidePanel.open({ tabId: tabs[0].id }).catch(console.error)
+                }
+            })
+        }
     }, 500, true, false), [])
 
     const openOptionsPage = React.useMemo(() => debounce(() => (globalThis as any)?.chrome?.runtime?.openOptionsPage?.(), 500, true, false), [])
