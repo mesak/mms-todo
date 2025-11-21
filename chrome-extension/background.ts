@@ -171,8 +171,43 @@ chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
       }
     })()
   }
+  // ✅ 改進 8: 處理登出操作（background.ts 端）
+  if (action === "logout_initiated") {
+    // Called when user initiates logout
+    console.log("Logout initiated in background")
+
+    // 1. 清除 chrome.storage.local 中的認證相關數據
+    chrome.storage.local.remove(["auth.ms", "ms_account", "todos", "categories"], () => {
+      console.log("Background: cleared auth and user data from chrome.storage.local")
+    })
+
+    // 2. 清除計劃的 token 刷新
+    chrome.alarms.clear(TOKEN_REFRESH_ALARM, () => {
+      console.log("Background: cleared token refresh alarm")
+    })
+  }
   if (action === "notify_error") {
     const { title = t("notification_error_title"), message = "" } = (msg as any) || {}
     createBasicNotification(title, message)
+  }
+  // ✅ 新增：轉發 rq_invalidate 消息到其他 Context（Popup/SidePanel）
+  if (action === "rq_invalidate") {
+    const targets = (msg as any).targets as Array<any> | undefined
+    if (Array.isArray(targets)) {
+      console.log("[background] Received rq_invalidate message, forwarding to all tabs:", targets)
+      // 轉發給所有打開的 tabs
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, { action: "rq_invalidate", targets }).catch(() => {
+              // Silently ignore if tab is not listening
+            })
+          }
+        }
+      })
+      // 也轉發給 SidePanel（如果支持）
+      // SidePanel 與特定 tab 關聯，需要 tabId
+      // 這裡我們通過 broadcast 讓所有 Context 都收到
+    }
   }
 })

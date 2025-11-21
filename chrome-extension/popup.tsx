@@ -16,6 +16,7 @@ import { useI18n } from "./lib/i18n"
 
 function PopupContent() {
     const auth = useAuth()
+    console.log("[popup] PopupContent rendered, isLoggedIn:", auth.isLoggedIn)
     const { isLoggedIn, token } = auth
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
     const { data: msLists = [] } = useMsTodoLists(token)
@@ -41,12 +42,38 @@ function PopupContent() {
 
     const openOptionsPage = React.useMemo(() => debounce(() => (globalThis as any)?.chrome?.runtime?.openOptionsPage?.(), 500, true, false), [])
 
+    // ✅ 改進 13: Popup 登入時打開 SidePanel 並關閉 Popup
+    const handlePopupLogin = React.useCallback(async () => {
+        console.log("[popup] Opening SidePanel for login...")
+        const c: any = (globalThis as any).chrome
+        if (!c?.tabs?.query || !c?.sidePanel?.open) {
+            console.error("[popup] Chrome API not available")
+            // 回退到直接登入
+            await auth.login()
+            return
+        }
+
+        // 打開 SidePanel
+        c.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+            if (tabs[0]?.id) {
+                c.sidePanel.open({ tabId: tabs[0].id })
+                console.log("[popup] SidePanel opened")
+            }
+        })
+
+        // 延遲後關閉 Popup，讓用戶在 SidePanel 中登入
+        setTimeout(() => {
+            window.close()
+            console.log("[popup] Popup closed")
+        }, 500)
+    }, [auth.login])
+
     return (
         <div
             className="w-[420px] min-h-[520px] max-w-[420px] bg-background text-foreground border-none shadow-none overflow-hidden with-ui-scale"
             style={{ fontFamily: fontFamily, ['--ui-font-size' as any]: `${uiFontSize}px`, ['--todo-item-font-size' as any]: `${itemFontSize}px` }}
         >
-            <AuthGate auth={auth} className="min-h-[520px]" size="sm" loginTitle={t("login_prompt")}>
+            <AuthGate auth={auth} className="min-h-[520px]" size="sm" loginTitle={t("login_prompt")} onLoginClick={handlePopupLogin}>
                 <div className="p-3 space-y-3 w-full max-w-full box-border">
                     <div className="flex items-center justify-between gap-2 w-full max-w-full">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -57,7 +84,7 @@ function PopupContent() {
                             />
                         </div>
                         <div className="flex items-center gap-1">
-                            <UserIndicator />
+                            <UserIndicator auth={auth} />
                             <Tooltip content={t("tooltip_settings")}>
                                 <button
                                     onClick={openOptionsPage}
@@ -87,14 +114,20 @@ function PopupContent() {
     )
 }
 
-function UserIndicator() {
-    const { token, logout } = useAuth()
+interface UserIndicatorProps {
+    auth: ReturnType<typeof useAuth>
+}
+
+function UserIndicator({ auth }: UserIndicatorProps) {
+    const { token, logout } = auth
+    console.log("[popup] UserIndicator rendered, logout function:", !!logout)
     const { data: me } = useMsMe(token)
     const { t } = useI18n()
     const name = me?.displayName || me?.userPrincipalName || me?.mail || t("user_placeholder")
     const email = me?.mail || me?.userPrincipalName
     const [open, setOpen] = React.useState(false)
     const onLogout = React.useMemo(() => debounce(async () => {
+        console.log("[popup] Logout button clicked")
         await logout()
         setOpen(false)
     }, 600, true, false), [logout])

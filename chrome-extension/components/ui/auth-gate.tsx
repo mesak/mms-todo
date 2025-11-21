@@ -31,15 +31,21 @@ type AuthGateProps = {
   className?: string
   /** Override the login description text */
   loginTitle?: string
+  /** Custom login click handler (e.g., for Popup to open SidePanel) */
+  onLoginClick?: () => void | Promise<void>
 }
 
-export function AuthGate({ children, auth, size = "md", className, loginTitle }: AuthGateProps) {
+export function AuthGate({ children, auth, size = "md", className, loginTitle, onLoginClick: customOnLoginClick }: AuthGateProps) {
   const internal = useAuthHook()
   const a = auth ?? internal
   const { t } = useI18n()
   const resolvedLoginTitle = loginTitle ?? t("login_prompt")
 
-  const onLoginClick = React.useMemo(() => debounce(() => { a.login?.() }, 800, true, false), [a.login])
+  // ✅ 改進 13: 支持自定義登入按鈕處理（用於 Popup 打開 SidePanel）
+  const onLoginClick = React.useMemo(() => {
+    const handler = customOnLoginClick || (() => a.login?.())
+    return debounce(handler, 800, true, false)
+  }, [customOnLoginClick, a.login])
 
   const loadingEl = (
     <div className={`w-full h-full min-h-[420px] flex items-center justify-center p-6 ${className ?? ""}`}>
