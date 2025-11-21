@@ -1,7 +1,7 @@
 import * as React from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useAuth } from "../hooks/useAuth"
-import { useMsTasks, useCreateMsTask, useDeleteMsTask, useUpdateMsTask } from "../hooks/useMsTodos"
+import { useMsTasks, useCreateMsTask, useDeleteMsTask, useUpdateMsTask, TodoTask } from "../hooks/useMsTodos"
 import { ExpandableInput } from "../components/ui/expandable-input"
 import { Button } from "../components/ui/button"
 import { Trash2, ChevronDown, ChevronRight, MessageSquareMore, MessageSquareText, ClipboardList } from "lucide-react"
@@ -10,18 +10,28 @@ import { Tooltip } from "../components/ui/tooltip"
 import { debounce } from "../lib/utils"
 import { useI18n } from "../lib/i18n"
 
+import { SortDropdown, SortOption } from "../components/ui/sort-dropdown"
+
 interface TodoTaskListProps {
   selectedTodoListId: string
   hideCompleted?: boolean
+  /** 過濾模式：all=顯示全部, incomplete=只顯示未完成, completed=只顯示已完成 */
+  filterMode?: "all" | "incomplete" | "completed"
+  /** 排序選項 */
+  sortOption?: SortOption
+  /** 排序變更回調 */
+  onSortChange?: (option: SortOption) => void
   listLabel?: string
   iconOnlyActions?: boolean
   maxHeight?: string
 }
 
-export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode = "all", sortOption = "created", onSortChange, listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
+  // 編輯狀態：{ taskId: 編輯中的文字 }
+  const [editingTask, setEditingTask] = React.useState<{ id: string; title: string } | null>(null)
   const { token } = useAuth()
   const { data: todoTasks = [], isLoading } = useMsTasks(selectedTodoListId, token, { enabled: !!selectedTodoListId })
   const createTask = useCreateMsTask(token)
@@ -54,8 +64,53 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   }, [])
 
   const visibleTodoTasks = React.useMemo(() => {
-    return hideCompleted ? todoTasks.filter((t) => t.status !== "completed") : todoTasks
-  }, [todoTasks, hideCompleted])
+    let filtered = todoTasks
+
+    // 1. 過濾
+    if (filterMode !== "all") {
+      filtered = todoTasks.filter((t) =>
+        filterMode === "incomplete"
+          ? t.status !== "completed"
+          : t.status === "completed"
+      )
+    } else if (hideCompleted) {
+      filtered = todoTasks.filter((t) => t.status !== "completed")
+    }
+
+    // 2. 排序
+    return [...filtered].sort((a, b) => {
+      // 輔助函數：獲取時間戳
+      const getTime = (dateStr?: string) => new Date(dateStr || 0).getTime()
+      const getDueTime = (t: any) => getTime(t.dueDateTime?.dateTime)
+
+      // 次要排序：建立時間（新的在前）
+      const secondarySort = () => getTime(b.createdDateTime) - getTime(a.createdDateTime)
+
+      switch (sortOption) {
+        case "created":
+          return secondarySort() // 預設就是建立時間
+        case "modified":
+          const modDiff = getTime(b.lastModifiedDateTime) - getTime(a.lastModifiedDateTime)
+          return modDiff !== 0 ? modDiff : secondarySort()
+        case "title":
+          const titleDiff = (a.title || "").localeCompare(b.title || "")
+          return titleDiff !== 0 ? titleDiff : secondarySort()
+        case "due":
+          // 到期日：有到期日的在前（且越早越前），無到期日的在後
+          const dueA = getDueTime(a)
+          const dueB = getDueTime(b)
+          if (dueA > 0 && dueB > 0) {
+            const diff = dueA - dueB
+            return diff !== 0 ? diff : secondarySort()
+          }
+          if (dueA > 0) return -1 // A 有到期日，排前
+          if (dueB > 0) return 1  // B 有到期日，排前
+          return secondarySort()
+        default:
+          return secondarySort()
+      }
+    })
+  }, [todoTasks, hideCompleted, filterMode, sortOption])
 
   // 全部展開/摺疊
   const toggleGlobalExpansion = React.useCallback(() => {
@@ -102,6 +157,44 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
 
   const makeDelete = React.useCallback((tId: string) => debounce(() => deleteTask.mutate({ listId: selectedTodoListId, taskId: tId }), 250, true, false), [selectedTodoListId, deleteTask])
 
+  // 雙擊開始編輯
+  const handleDoubleClick = React.useCallback((task: TodoTask) => {
+    setEditingTask({ id: task.id, title: task.title })
+  }, [])
+
+  // 保存編輯
+  const handleSaveEdit = React.useCallback(() => {
+    if (!editingTask) return
+    const newTitle = editingTask.title.trim()
+    if (!newTitle || newTitle === todoTasks.find(t => t.id === editingTask.id)?.title) {
+      setEditingTask(null)
+      return
+    }
+    updateTask.mutate(
+      { listId: selectedTodoListId, taskId: editingTask.id, patch: { title: newTitle } },
+      {
+        onSuccess: () => setEditingTask(null),
+        onError: () => setEditingTask(null)
+      }
+    )
+  }, [editingTask, selectedTodoListId, updateTask, todoTasks])
+
+  // 取消編輯
+  const handleCancelEdit = React.useCallback(() => {
+    setEditingTask(null)
+  }, [])
+
+  // 處理編輯輸入框的鍵盤事件
+  const handleEditKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSaveEdit()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      handleCancelEdit()
+    }
+  }, [handleSaveEdit, handleCancelEdit])
+
   return (
     <div className="space-y-3 w-full max-w-full overflow-hidden">
       <div className="w-full max-w-full">
@@ -121,18 +214,23 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
               {visibleTodoTasks.length}
             </span>
           </div>
-          {visibleTodoTasks.some(t => isMultiline(t.title)) && (
-            <Tooltip content={globalExpanded ? t("tooltip_collapse_all") : t("tooltip_expand_all")}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleGlobalExpansion}
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-              >
-                {globalExpanded ? <MessageSquareMore className="h-3 w-3" /> : <MessageSquareText className="h-3 w-3" />}
-              </Button>
-            </Tooltip>
-          )}
+          <div className="flex items-center gap-1">
+            {onSortChange && sortOption && (
+              <SortDropdown value={sortOption} onChange={onSortChange} />
+            )}
+            {visibleTodoTasks.some(t => isMultiline(t.title)) && (
+              <Tooltip content={globalExpanded ? t("tooltip_collapse_all") : t("tooltip_expand_all")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleGlobalExpansion}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                >
+                  {globalExpanded ? <MessageSquareMore className="h-3 w-3" /> : <MessageSquareText className="h-3 w-3" />}
+                </Button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       )}
 
@@ -168,14 +266,30 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
                     className="self-center shrink-0"
                   />
                   <motion.div layout className="flex-1 min-w-0 self-center">
-                    <motion.div
-                      layout
-                      className={`break-words whitespace-pre-wrap ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}
-                      style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
-                      transition={{ layout: { duration: 0.2 } }}
-                    >
-                      {displayText}
-                    </motion.div>
+                    {editingTask?.id === task.id ? (
+                      // 編輯模式：顯示輸入框
+                      <input
+                        type="text"
+                        value={editingTask.title}
+                        onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                        onKeyDown={handleEditKeyDown}
+                        onBlur={handleSaveEdit}
+                        autoFocus
+                        className="w-full px-2 py-1 text-sm border border-primary rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
+                      />
+                    ) : (
+                      // 正常模式：顯示文字
+                      <motion.div
+                        layout
+                        onDoubleClick={() => handleDoubleClick(task)}
+                        className={`break-words whitespace-pre-wrap cursor-text ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                        style={{ fontSize: "var(--todo-item-font-size, 14px)" }}
+                        transition={{ layout: { duration: 0.2 } }}
+                      >
+                        {displayText}
+                      </motion.div>
+                    )}
                     {isMultilineTodo && !isExpanded && (
                       <motion.button
                         initial={{ opacity: 0 }}

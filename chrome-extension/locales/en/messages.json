@@ -1,107 +1,338 @@
 {
-  "extensionName": { "message": "mms-todo" },
-  "extensionDescription": { "message": "mesak microsoft to do" },
-  "login_prompt": { "message": "Please sign in with your Microsoft account" },
-  "settings": { "message": "Settings" },
-  "open_side_panel": { "message": "Open side panel" },
-  "open_settings": { "message": "Open settings" },
-  "list_incomplete_tasks": { "message": "Incomplete tasks" },
-  "user_placeholder": { "message": "User" },
-  "signed_in": { "message": "Signed in" },
-  "sign_out": { "message": "Sign out" },
-  "tasks": { "message": "Tasks" },
-  "task_list": { "message": "Task list" },
-  "list_management": { "message": "List management" },
-  "open_list_management": { "message": "Open list management" },
-  "lists": { "message": "Lists" },
-  "add_list": { "message": "Add list" },
-  "cancel": { "message": "Cancel" },
-  "category_name_placeholder": { "message": "Enter list name..." },
-  "add": { "message": "Add" },
-  "save": { "message": "Save" },
-  "rename": { "message": "Rename" },
-  "delete_list": { "message": "Delete list" },
-  "cannot_delete_default_list": { "message": "Can't delete the default list" },
-  "confirm_delete_list_with_count": { "message": "This list still has $1 incomplete tasks. Delete it anyway? This action can't be undone." },
-  "new_task_placeholder": { "message": "Add a task..." },
-  "expand_all": { "message": "Expand all" },
-  "collapse_all": { "message": "Collapse all" },
-  "loading": { "message": "Loading..." },
-  "no_tasks": { "message": "No tasks yet" },
-  "show_full_content": { "message": "Show full content" },
-  "collapse_item": { "message": "Collapse" },
-  "delete_task": { "message": "Delete task" },
-  "verifying": { "message": "Verifying, please wait..." },
-  "checking_access_token": { "message": "Checking access token..." },
-  "checking_refresh_token": { "message": "Checking refresh token..." },
-  "exchanging_access_token": { "message": "Exchanging a new access token..." },
-  "verification_done": { "message": "✓ Verified" },
-  "verification_failed": { "message": "❌ Verification failed. Please sign in again" },
-  "sign_in": { "message": "Sign in" },
-  "settings_title": { "message": "Settings" },
-  "general_section_title": { "message": "General" },
-  "general_section_description": { "message": "Shared basic preferences" },
-  "account_section_label": { "message": "Microsoft account" },
-  "account_section_loading": { "message": "Checking account status..." },
-  "account_section_signed_in_as": { "message": "Signed in as" },
-  "account_section_account_id_label": { "message": "Account ID" },
-  "account_section_signed_out": { "message": "Not signed in. Please sign in to connect your Microsoft account." },
-  "username_label": { "message": "Display name" },
-  "username_placeholder": { "message": "Enter display name" },
-  "font_section_title": { "message": "Typography" },
-  "font_section_description": { "message": "Adjust the interface fonts and sizes (more coming soon)." },
-  "font_family_label": { "message": "Font family" },
-  "custom_fonts_group_label": { "message": "Custom fonts" },
-  "default_fonts_group_label": { "message": "Default fonts" },
-  "custom_font_helper": { "message": "Add a custom font (advanced)" },
-  "custom_font_placeholder": { "message": "e.g. \"Noto Sans TC\", system-ui, -apple-system, Segoe UI, sans-serif" },
-  "add_custom_font": { "message": "Add" },
-  "remove_custom_font": { "message": "Remove custom font" },
-  "font_choice_system_ui": { "message": "System default (System UI)" },
-  "font_choice_noto_sans_tc": { "message": "Noto Sans TC (Traditional Chinese)" },
-  "font_choice_noto_serif_tc": { "message": "Noto Serif TC (Traditional Chinese serif)" },
-  "font_choice_inter": { "message": "Inter" },
-  "font_choice_roboto": { "message": "Roboto" },
-  "font_choice_menlo": { "message": "Menlo (Monospaced)" },
-  "custom_font_notice": { "message": "Note: This is an advanced option. Enter the full CSS font-family value (including fallbacks and quotes). If the font isn't installed locally, the browser will fall back to the next font." },
-  "ui_font_size_label": { "message": "UI font size" },
-  "item_font_size_label": { "message": "Item font size" },
-  "preview_label": { "message": "Preview" },
-  "preview_ui_sample": { "message": "UI sample: 中文 English 123 ABC" },
-  "preview_item_sample": { "message": "Item sample: 我愛待辦事項 Todo List ✓" },
-  "saving": { "message": "Saving..." },
-  "save_action": { "message": "Save" },
-  "reset_font_defaults": { "message": "Reset font defaults" },
-  "settings_saved_toast": { "message": "Settings saved" },
-  "select_list_placeholder": { "message": "Select a list..." },
-  "search_lists_placeholder": { "message": "Search lists..." },
-  "tooltip_settings": { "message": "Settings" },
-  "tooltip_open_side_panel": { "message": "Open side panel" },
-  "tooltip_add_list": { "message": "Add list" },
-  "tooltip_cancel": { "message": "Cancel" },
-  "tooltip_rename": { "message": "Rename" },
-  "tooltip_delete_list": { "message": "Delete list" },
-  "tooltip_cannot_delete_default_list": { "message": "Can't delete the default list" },
-  "tooltip_delete_task": { "message": "Delete task" },
-  "tooltip_expand_all": { "message": "Expand all" },
-  "tooltip_collapse_all": { "message": "Collapse all" },
-  "tooltip_expand_sidebar": { "message": "Expand sidebar" },
-  "tooltip_collapse_sidebar": { "message": "Collapse sidebar" },
-  "toast_fetch_error_title": { "message": "Failed to load data" },
-  "toast_mutation_error_title": { "message": "Action failed" },
-  "notification_login_success_title": { "message": "Signed in" },
-  "notification_login_success_message_named": { "message": "Signed in to Microsoft account: $1" },
-  "notification_login_success_message_generic": { "message": "Signed in to Microsoft account" },
-  "notification_error_title": { "message": "Something went wrong" },
-  "toast_create_list_error_title": { "message": "Failed to create list" },
-  "toast_delete_list_error_title": { "message": "Failed to delete list" },
-  "toast_rename_list_error_title": { "message": "Failed to rename list" },
-  "toast_create_task_error_title": { "message": "Failed to create task" },
-  "toast_update_task_error_title": { "message": "Failed to update task" },
-  "toast_delete_task_error_title": { "message": "Failed to delete task" },
-  "toast_add_file_attachment_error_title": { "message": "Failed to add attachment" },
-  "toast_add_link_attachment_error_title": { "message": "Failed to add link attachment" },
-  "toast_delete_attachment_error_title": { "message": "Failed to delete attachment" },
-  "toast_close_aria_label": { "message": "Close notification" },
-  "toast_close_button": { "message": "Close" }
+  "extensionName": {
+    "message": "mms-todo"
+  },
+  "extensionDescription": {
+    "message": "mesak microsoft to do"
+  },
+  "login_prompt": {
+    "message": "Please sign in with your Microsoft account"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "open_side_panel": {
+    "message": "Open side panel"
+  },
+  "open_settings": {
+    "message": "Open settings"
+  },
+  "list_incomplete_tasks": {
+    "message": "Incomplete tasks"
+  },
+  "incomplete_tasks": {
+    "message": "Incomplete"
+  },
+  "completed_tasks": {
+    "message": "Completed"
+  },
+  "user_placeholder": {
+    "message": "User"
+  },
+  "signed_in": {
+    "message": "Signed in"
+  },
+  "sign_out": {
+    "message": "Sign out"
+  },
+  "tasks": {
+    "message": "Tasks"
+  },
+  "task_list": {
+    "message": "Task list"
+  },
+  "list_management": {
+    "message": "List management"
+  },
+  "open_list_management": {
+    "message": "Open list management"
+  },
+  "lists": {
+    "message": "Lists"
+  },
+  "add_list": {
+    "message": "Add list"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "category_name_placeholder": {
+    "message": "Enter list name..."
+  },
+  "add": {
+    "message": "Add"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "rename": {
+    "message": "Rename"
+  },
+  "delete_list": {
+    "message": "Delete list"
+  },
+  "cannot_delete_default_list": {
+    "message": "Can't delete the default list"
+  },
+  "confirm_delete_list_with_count": {
+    "message": "This list still has $1 incomplete tasks. Delete it anyway? This action can't be undone."
+  },
+  "new_task_placeholder": {
+    "message": "Add a task..."
+  },
+  "expand_all": {
+    "message": "Expand all"
+  },
+  "collapse_all": {
+    "message": "Collapse all"
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+  "no_tasks": {
+    "message": "No tasks yet"
+  },
+  "show_full_content": {
+    "message": "Show full content"
+  },
+  "collapse_item": {
+    "message": "Collapse"
+  },
+  "delete_task": {
+    "message": "Delete task"
+  },
+  "verifying": {
+    "message": "Verifying, please wait..."
+  },
+  "checking_access_token": {
+    "message": "Checking access token..."
+  },
+  "checking_refresh_token": {
+    "message": "Checking refresh token..."
+  },
+  "exchanging_access_token": {
+    "message": "Exchanging a new access token..."
+  },
+  "verification_done": {
+    "message": "✓ Verified"
+  },
+  "verification_failed": {
+    "message": "❌ Verification failed. Please sign in again"
+  },
+  "sign_in": {
+    "message": "Sign in"
+  },
+  "settings_title": {
+    "message": "Settings"
+  },
+  "general_section_title": {
+    "message": "General"
+  },
+  "general_section_description": {
+    "message": "Shared basic preferences"
+  },
+  "account_section_label": {
+    "message": "Microsoft account"
+  },
+  "account_section_loading": {
+    "message": "Checking account status..."
+  },
+  "account_section_signed_in_as": {
+    "message": "Signed in as"
+  },
+  "account_section_account_id_label": {
+    "message": "Account ID"
+  },
+  "account_section_signed_out": {
+    "message": "Not signed in. Please sign in to connect your Microsoft account."
+  },
+  "username_label": {
+    "message": "Display name"
+  },
+  "username_placeholder": {
+    "message": "Enter display name"
+  },
+  "font_section_title": {
+    "message": "Typography"
+  },
+  "font_section_description": {
+    "message": "Adjust the interface fonts and sizes (more coming soon)."
+  },
+  "font_family_label": {
+    "message": "Font family"
+  },
+  "custom_fonts_group_label": {
+    "message": "Custom fonts"
+  },
+  "default_fonts_group_label": {
+    "message": "Default fonts"
+  },
+  "custom_font_helper": {
+    "message": "Add a custom font (advanced)"
+  },
+  "custom_font_placeholder": {
+    "message": "e.g. \"Noto Sans TC\", system-ui, -apple-system, Segoe UI, sans-serif"
+  },
+  "add_custom_font": {
+    "message": "Add"
+  },
+  "remove_custom_font": {
+    "message": "Remove custom font"
+  },
+  "font_choice_system_ui": {
+    "message": "System default (System UI)"
+  },
+  "font_choice_noto_sans_tc": {
+    "message": "Noto Sans TC (Traditional Chinese)"
+  },
+  "font_choice_noto_serif_tc": {
+    "message": "Noto Serif TC (Traditional Chinese serif)"
+  },
+  "font_choice_inter": {
+    "message": "Inter"
+  },
+  "font_choice_roboto": {
+    "message": "Roboto"
+  },
+  "font_choice_menlo": {
+    "message": "Menlo (Monospaced)"
+  },
+  "custom_font_notice": {
+    "message": "Note: This is an advanced option. Enter the full CSS font-family value (including fallbacks and quotes). If the font isn't installed locally, the browser will fall back to the next font."
+  },
+  "ui_font_size_label": {
+    "message": "UI font size"
+  },
+  "item_font_size_label": {
+    "message": "Item font size"
+  },
+  "preview_label": {
+    "message": "Preview"
+  },
+  "preview_ui_sample": {
+    "message": "UI sample: 中文 English 123 ABC"
+  },
+  "preview_item_sample": {
+    "message": "Item sample: 我愛待辦事項 Todo List ✓"
+  },
+  "saving": {
+    "message": "Saving..."
+  },
+  "save_action": {
+    "message": "Save"
+  },
+  "reset_font_defaults": {
+    "message": "Reset font defaults"
+  },
+  "settings_saved_toast": {
+    "message": "Settings saved"
+  },
+  "select_list_placeholder": {
+    "message": "Select a list..."
+  },
+  "search_lists_placeholder": {
+    "message": "Search lists..."
+  },
+  "tooltip_settings": {
+    "message": "Settings"
+  },
+  "tooltip_open_side_panel": {
+    "message": "Open side panel"
+  },
+  "tooltip_add_list": {
+    "message": "Add list"
+  },
+  "tooltip_cancel": {
+    "message": "Cancel"
+  },
+  "tooltip_rename": {
+    "message": "Rename"
+  },
+  "tooltip_delete_list": {
+    "message": "Delete list"
+  },
+  "tooltip_cannot_delete_default_list": {
+    "message": "Can't delete the default list"
+  },
+  "tooltip_delete_task": {
+    "message": "Delete task"
+  },
+  "tooltip_expand_all": {
+    "message": "Expand all"
+  },
+  "tooltip_collapse_all": {
+    "message": "Collapse all"
+  },
+  "tooltip_expand_sidebar": {
+    "message": "Expand sidebar"
+  },
+  "tooltip_collapse_sidebar": {
+    "message": "Collapse sidebar"
+  },
+  "toast_fetch_error_title": {
+    "message": "Failed to load data"
+  },
+  "toast_mutation_error_title": {
+    "message": "Action failed"
+  },
+  "notification_login_success_title": {
+    "message": "Signed in"
+  },
+  "notification_login_success_message_named": {
+    "message": "Signed in to Microsoft account: $1"
+  },
+  "notification_login_success_message_generic": {
+    "message": "Signed in to Microsoft account"
+  },
+  "notification_error_title": {
+    "message": "Something went wrong"
+  },
+  "toast_create_list_error_title": {
+    "message": "Failed to create list"
+  },
+  "toast_delete_list_error_title": {
+    "message": "Failed to delete list"
+  },
+  "toast_rename_list_error_title": {
+    "message": "Failed to rename list"
+  },
+  "toast_create_task_error_title": {
+    "message": "Failed to create task"
+  },
+  "toast_update_task_error_title": {
+    "message": "Failed to update task"
+  },
+  "toast_delete_task_error_title": {
+    "message": "Failed to delete task"
+  },
+  "toast_add_file_attachment_error_title": {
+    "message": "Failed to add attachment"
+  },
+  "toast_add_link_attachment_error_title": {
+    "message": "Failed to add link attachment"
+  },
+  "toast_delete_attachment_error_title": {
+    "message": "Failed to delete attachment"
+  },
+  "toast_close_aria_label": {
+    "message": "Close notification"
+  },
+  "toast_close_button": {
+    "message": "Close"
+  },
+  "sort_tasks": {
+    "message": "Sort tasks"
+  },
+  "sort_by_created": {
+    "message": "Date created"
+  },
+  "sort_by_modified": {
+    "message": "Date modified"
+  },
+  "sort_by_title": {
+    "message": "Title"
+  },
+  "sort_by_due": {
+    "message": "Due date"
+  }
 }
