@@ -319,5 +319,20 @@
   },
   "toast_close_button": {
     "message": "Close"
+  },
+  "sort_tasks": {
+    "message": "Sort tasks"
+  },
+  "sort_by_created": {
+    "message": "Date created"
+  },
+  "sort_by_modified": {
+    "message": "Date modified"
+  },
+  "sort_by_title": {
+    "message": "Title"
+  },
+  "sort_by_due": {
+    "message": "Due date"
   }
 }

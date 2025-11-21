@@ -25,11 +25,14 @@ export default function IndexSidePanel() {
     )
 }
 
+import { SortOption } from "./components/ui/sort-dropdown"
+
 function SidePanelShell() {
     const auth = useAuth()
     const { token, isLoggedIn } = auth
     const { data: msLists = [], isLoading: listsLoading } = useMsTodoLists(token)
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
+    const [sortOption, setSortOption] = React.useState<SortOption>("created")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
     const { t } = useI18n()
@@ -76,12 +79,12 @@ function SidePanelShell() {
                 <main className="flex-1 p-1 h-full">
                     <AuthGate auth={auth}>
                         <div className="space-y-4 h-full">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between px-1">
                                 <div className="text-lg font-semibold">{t("tasks")}</div>
                             </div>
                             <Separator />
                             <div className="flex-1">
-                                <TodoList selectedTodoListId={selectedTodoListId} listLabel={t("task_list")} maxHeight="calc(100vh - 200px)" />
+                                <TodoList selectedTodoListId={selectedTodoListId} sortOption={sortOption} onSortChange={setSortOption} listLabel={t("task_list")} maxHeight="calc(100vh - 200px)" />
                             </div>
                         </div>
                     </AuthGate>

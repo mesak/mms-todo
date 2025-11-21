@@ -319,5 +319,20 @@
   },
   "toast_close_button": {
     "message": "關閉"
+  },
+  "sort_tasks": {
+    "message": "排序任務"
+  },
+  "sort_by_created": {
+    "message": "建立時間"
+  },
+  "sort_by_modified": {
+    "message": "修改時間"
+  },
+  "sort_by_title": {
+    "message": "標題"
+  },
+  "sort_by_due": {
+    "message": "到期日"
   }
 }

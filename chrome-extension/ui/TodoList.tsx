@@ -10,17 +10,23 @@ import { Tooltip } from "../components/ui/tooltip"
 import { debounce } from "../lib/utils"
 import { useI18n } from "../lib/i18n"
 
+import { SortDropdown, SortOption } from "../components/ui/sort-dropdown"
+
 interface TodoTaskListProps {
   selectedTodoListId: string
   hideCompleted?: boolean
   /** 過濾模式：all=顯示全部, incomplete=只顯示未完成, completed=只顯示已完成 */
   filterMode?: "all" | "incomplete" | "completed"
+  /** 排序選項 */
+  sortOption?: SortOption
+  /** 排序變更回調 */
+  onSortChange?: (option: SortOption) => void
   listLabel?: string
   iconOnlyActions?: boolean
   maxHeight?: string
 }
 
-export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode = "all", listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode = "all", sortOption = "created", onSortChange, listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
@@ -56,16 +62,53 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode
   }, [])
 
   const visibleTodoTasks = React.useMemo(() => {
-    // 優先使用 filterMode，如果沒有則回退到 hideCompleted
+    let filtered = todoTasks
+
+    // 1. 過濾
     if (filterMode !== "all") {
-      return todoTasks.filter((t) =>
+      filtered = todoTasks.filter((t) =>
         filterMode === "incomplete"
           ? t.status !== "completed"
           : t.status === "completed"
       )
+    } else if (hideCompleted) {
+      filtered = todoTasks.filter((t) => t.status !== "completed")
     }
-    return hideCompleted ? todoTasks.filter((t) => t.status !== "completed") : todoTasks
-  }, [todoTasks, hideCompleted, filterMode])
+
+    // 2. 排序
+    return [...filtered].sort((a, b) => {
+      // 輔助函數：獲取時間戳
+      const getTime = (dateStr?: string) => new Date(dateStr || 0).getTime()
+      const getDueTime = (t: any) => getTime(t.dueDateTime?.dateTime)
+
+      // 次要排序：建立時間（新的在前）
+      const secondarySort = () => getTime(b.createdDateTime) - getTime(a.createdDateTime)
+
+      switch (sortOption) {
+        case "created":
+          return secondarySort() // 預設就是建立時間
+        case "modified":
+          const modDiff = getTime(b.lastModifiedDateTime) - getTime(a.lastModifiedDateTime)
+          return modDiff !== 0 ? modDiff : secondarySort()
+        case "title":
+          const titleDiff = (a.title || "").localeCompare(b.title || "")
+          return titleDiff !== 0 ? titleDiff : secondarySort()
+        case "due":
+          // 到期日：有到期日的在前（且越早越前），無到期日的在後
+          const dueA = getDueTime(a)
+          const dueB = getDueTime(b)
+          if (dueA > 0 && dueB > 0) {
+            const diff = dueA - dueB
+            return diff !== 0 ? diff : secondarySort()
+          }
+          if (dueA > 0) return -1 // A 有到期日，排前
+          if (dueB > 0) return 1  // B 有到期日，排前
+          return secondarySort()
+        default:
+          return secondarySort()
+      }
+    })
+  }, [todoTasks, hideCompleted, filterMode, sortOption])
 
   // 全部展開/摺疊
   const toggleGlobalExpansion = React.useCallback(() => {
@@ -131,18 +174,23 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode
               {visibleTodoTasks.length}
             </span>
           </div>
-          {visibleTodoTasks.some(t => isMultiline(t.title)) && (
-            <Tooltip content={globalExpanded ? t("tooltip_collapse_all") : t("tooltip_expand_all")}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleGlobalExpansion}
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-              >
-                {globalExpanded ? <MessageSquareMore className="h-3 w-3" /> : <MessageSquareText className="h-3 w-3" />}
-              </Button>
-            </Tooltip>
-          )}
+          <div className="flex items-center gap-1">
+            {onSortChange && sortOption && (
+              <SortDropdown value={sortOption} onChange={onSortChange} />
+            )}
+            {visibleTodoTasks.some(t => isMultiline(t.title)) && (
+              <Tooltip content={globalExpanded ? t("tooltip_collapse_all") : t("tooltip_expand_all")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleGlobalExpansion}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                >
+                  {globalExpanded ? <MessageSquareMore className="h-3 w-3" /> : <MessageSquareText className="h-3 w-3" />}
+                </Button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       )}
 
