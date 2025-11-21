@@ -1,107 +1,323 @@
 {
-  "extensionName": { "message": "mms-todo" },
-  "extensionDescription": { "message": "mesak microsoft to do" },
-  "login_prompt": { "message": "請先登入 Microsoft 帳號" },
-  "settings": { "message": "設定" },
-  "open_side_panel": { "message": "開啟側邊面板" },
-  "open_settings": { "message": "開啟設定" },
-  "list_incomplete_tasks": { "message": "未完成任務" },
-  "user_placeholder": { "message": "使用者" },
-  "signed_in": { "message": "已登入" },
-  "sign_out": { "message": "登出" },
-  "tasks": { "message": "待辦事項" },
-  "task_list": { "message": "任務清單" },
-  "list_management": { "message": "分類管理" },
-  "open_list_management": { "message": "開啟分類管理" },
-  "lists": { "message": "類別" },
-  "add_list": { "message": "新增類別" },
-  "cancel": { "message": "取消" },
-  "category_name_placeholder": { "message": "輸入類別名稱..." },
-  "add": { "message": "新增" },
-  "save": { "message": "儲存" },
-  "rename": { "message": "重新命名" },
-  "delete_list": { "message": "刪除類別" },
-  "cannot_delete_default_list": { "message": "無法刪除預設類別" },
-  "confirm_delete_list_with_count": { "message": "此類別仍有 $1 個未完成的任務，確定要刪除嗎？此動作無法復原。" },
-  "new_task_placeholder": { "message": "新增任務..." },
-  "expand_all": { "message": "全部展開" },
-  "collapse_all": { "message": "全部摺疊" },
-  "loading": { "message": "載入中..." },
-  "no_tasks": { "message": "目前沒有任務" },
-  "show_full_content": { "message": "顯示完整內容" },
-  "collapse_item": { "message": "收合" },
-  "delete_task": { "message": "刪除任務" },
-  "verifying": { "message": "驗證中，請稍候..." },
-  "checking_access_token": { "message": "檢查存取權杖..." },
-  "checking_refresh_token": { "message": "檢查更新權杖..." },
-  "exchanging_access_token": { "message": "交換新的存取權杖..." },
-  "verification_done": { "message": "✓ 驗證完成" },
-  "verification_failed": { "message": "❌ 驗證失敗，請重新登入" },
-  "sign_in": { "message": "登入" },
-  "settings_title": { "message": "設定" },
-  "general_section_title": { "message": "一般" },
-  "general_section_description": { "message": "共用的基本設定" },
-  "account_section_label": { "message": "Microsoft 帳號" },
-  "account_section_loading": { "message": "正在檢查帳號狀態…" },
-  "account_section_signed_in_as": { "message": "已登入帳號" },
-  "account_section_account_id_label": { "message": "帳號識別碼" },
-  "account_section_signed_out": { "message": "尚未登入，請登入以連結 Microsoft 帳號。" },
-  "username_label": { "message": "使用者名稱" },
-  "username_placeholder": { "message": "輸入顯示名稱" },
-  "font_section_title": { "message": "字體設定" },
-  "font_section_description": { "message": "調整介面字體與大小（其他項目後續可再新增）" },
-  "font_family_label": { "message": "字體家族" },
-  "custom_fonts_group_label": { "message": "自訂字體" },
-  "default_fonts_group_label": { "message": "預設字體" },
-  "custom_font_helper": { "message": "新增自訂字體（進階）" },
-  "custom_font_placeholder": { "message": "例如：\"Noto Sans TC\", system-ui, -apple-system, Segoe UI, sans-serif" },
-  "add_custom_font": { "message": "新增" },
-  "remove_custom_font": { "message": "移除自訂字體" },
-  "font_choice_system_ui": { "message": "系統預設 (System UI)" },
-  "font_choice_noto_sans_tc": { "message": "Noto Sans TC (繁中)" },
-  "font_choice_noto_serif_tc": { "message": "Noto Serif TC (繁中襯線)" },
-  "font_choice_inter": { "message": "Inter" },
-  "font_choice_roboto": { "message": "Roboto" },
-  "font_choice_menlo": { "message": "Menlo (等寬)" },
-  "custom_font_notice": { "message": "注意：這是進階設定，請輸入完整的 CSS font-family 值（包含備援字體與正確引號）。若使用本機未安裝的字體，瀏覽器會退回到備援字體。" },
-  "ui_font_size_label": { "message": "介面字體大小（UI）" },
-  "item_font_size_label": { "message": "條目字體大小（Item）" },
-  "preview_label": { "message": "預覽" },
-  "preview_ui_sample": { "message": "介面（UI）示例：中文 English 123 ABC" },
-  "preview_item_sample": { "message": "條目（Item）示例：我愛待辦事項 Todo List ✓" },
-  "saving": { "message": "儲存中..." },
-  "save_action": { "message": "儲存" },
-  "reset_font_defaults": { "message": "還原字體預設" },
-  "settings_saved_toast": { "message": "設定已儲存" },
-  "select_list_placeholder": { "message": "選擇清單..." },
-  "search_lists_placeholder": { "message": "搜尋清單..." },
-  "tooltip_settings": { "message": "設定" },
-  "tooltip_open_side_panel": { "message": "開啟側邊面板" },
-  "tooltip_add_list": { "message": "新增類別" },
-  "tooltip_cancel": { "message": "取消" },
-  "tooltip_rename": { "message": "重新命名" },
-  "tooltip_delete_list": { "message": "刪除類別" },
-  "tooltip_cannot_delete_default_list": { "message": "無法刪除預設類別" },
-  "tooltip_delete_task": { "message": "刪除任務" },
-  "tooltip_expand_all": { "message": "全部展開" },
-  "tooltip_collapse_all": { "message": "全部摺疊" },
-  "tooltip_expand_sidebar": { "message": "展開清單" },
-  "tooltip_collapse_sidebar": { "message": "收合清單" },
-  "toast_fetch_error_title": { "message": "讀取資料失敗" },
-  "toast_mutation_error_title": { "message": "操作失敗" },
-  "notification_login_success_title": { "message": "登入成功" },
-  "notification_login_success_message_named": { "message": "已成功登入 Microsoft 帳號：$1" },
-  "notification_login_success_message_generic": { "message": "已成功登入 Microsoft 帳號" },
-  "notification_error_title": { "message": "發生錯誤" },
-  "toast_create_list_error_title": { "message": "新增清單失敗" },
-  "toast_delete_list_error_title": { "message": "刪除清單失敗" },
-  "toast_rename_list_error_title": { "message": "重新命名清單失敗" },
-  "toast_create_task_error_title": { "message": "新增任務失敗" },
-  "toast_update_task_error_title": { "message": "更新任務失敗" },
-  "toast_delete_task_error_title": { "message": "刪除任務失敗" },
-  "toast_add_file_attachment_error_title": { "message": "新增附件失敗" },
-  "toast_add_link_attachment_error_title": { "message": "新增連結附件失敗" },
-  "toast_delete_attachment_error_title": { "message": "刪除附件失敗" },
-  "toast_close_aria_label": { "message": "關閉通知" },
-  "toast_close_button": { "message": "關閉" }
+  "extensionName": {
+    "message": "mms-todo"
+  },
+  "extensionDescription": {
+    "message": "mesak microsoft to do"
+  },
+  "login_prompt": {
+    "message": "請先登入 Microsoft 帳號"
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "open_side_panel": {
+    "message": "開啟側邊面板"
+  },
+  "open_settings": {
+    "message": "開啟設定"
+  },
+  "list_incomplete_tasks": {
+    "message": "未完成任務"
+  },
+  "incomplete_tasks": {
+    "message": "未完成"
+  },
+  "completed_tasks": {
+    "message": "已完成"
+  },
+  "user_placeholder": {
+    "message": "使用者"
+  },
+  "signed_in": {
+    "message": "已登入"
+  },
+  "sign_out": {
+    "message": "登出"
+  },
+  "tasks": {
+    "message": "待辦事項"
+  },
+  "task_list": {
+    "message": "任務清單"
+  },
+  "list_management": {
+    "message": "分類管理"
+  },
+  "open_list_management": {
+    "message": "開啟分類管理"
+  },
+  "lists": {
+    "message": "類別"
+  },
+  "add_list": {
+    "message": "新增類別"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "category_name_placeholder": {
+    "message": "輸入類別名稱..."
+  },
+  "add": {
+    "message": "新增"
+  },
+  "save": {
+    "message": "儲存"
+  },
+  "rename": {
+    "message": "重新命名"
+  },
+  "delete_list": {
+    "message": "刪除類別"
+  },
+  "cannot_delete_default_list": {
+    "message": "無法刪除預設類別"
+  },
+  "confirm_delete_list_with_count": {
+    "message": "此類別仍有 $1 個未完成的任務，確定要刪除嗎？此動作無法復原。"
+  },
+  "new_task_placeholder": {
+    "message": "新增任務..."
+  },
+  "expand_all": {
+    "message": "全部展開"
+  },
+  "collapse_all": {
+    "message": "全部摺疊"
+  },
+  "loading": {
+    "message": "載入中..."
+  },
+  "no_tasks": {
+    "message": "目前沒有任務"
+  },
+  "show_full_content": {
+    "message": "顯示完整內容"
+  },
+  "collapse_item": {
+    "message": "收合"
+  },
+  "delete_task": {
+    "message": "刪除任務"
+  },
+  "verifying": {
+    "message": "驗證中，請稍候..."
+  },
+  "checking_access_token": {
+    "message": "檢查存取權杖..."
+  },
+  "checking_refresh_token": {
+    "message": "檢查更新權杖..."
+  },
+  "exchanging_access_token": {
+    "message": "交換新的存取權杖..."
+  },
+  "verification_done": {
+    "message": "✓ 驗證完成"
+  },
+  "verification_failed": {
+    "message": "❌ 驗證失敗，請重新登入"
+  },
+  "sign_in": {
+    "message": "登入"
+  },
+  "settings_title": {
+    "message": "設定"
+  },
+  "general_section_title": {
+    "message": "一般"
+  },
+  "general_section_description": {
+    "message": "共用的基本設定"
+  },
+  "account_section_label": {
+    "message": "Microsoft 帳號"
+  },
+  "account_section_loading": {
+    "message": "正在檢查帳號狀態…"
+  },
+  "account_section_signed_in_as": {
+    "message": "已登入帳號"
+  },
+  "account_section_account_id_label": {
+    "message": "帳號識別碼"
+  },
+  "account_section_signed_out": {
+    "message": "尚未登入，請登入以連結 Microsoft 帳號。"
+  },
+  "username_label": {
+    "message": "使用者名稱"
+  },
+  "username_placeholder": {
+    "message": "輸入顯示名稱"
+  },
+  "font_section_title": {
+    "message": "字體設定"
+  },
+  "font_section_description": {
+    "message": "調整介面字體與大小（其他項目後續可再新增）"
+  },
+  "font_family_label": {
+    "message": "字體家族"
+  },
+  "custom_fonts_group_label": {
+    "message": "自訂字體"
+  },
+  "default_fonts_group_label": {
+    "message": "預設字體"
+  },
+  "custom_font_helper": {
+    "message": "新增自訂字體（進階）"
+  },
+  "custom_font_placeholder": {
+    "message": "例如：\"Noto Sans TC\", system-ui, -apple-system, Segoe UI, sans-serif"
+  },
+  "add_custom_font": {
+    "message": "新增"
+  },
+  "remove_custom_font": {
+    "message": "移除自訂字體"
+  },
+  "font_choice_system_ui": {
+    "message": "系統預設 (System UI)"
+  },
+  "font_choice_noto_sans_tc": {
+    "message": "Noto Sans TC (繁中)"
+  },
+  "font_choice_noto_serif_tc": {
+    "message": "Noto Serif TC (繁中襯線)"
+  },
+  "font_choice_inter": {
+    "message": "Inter"
+  },
+  "font_choice_roboto": {
+    "message": "Roboto"
+  },
+  "font_choice_menlo": {
+    "message": "Menlo (等寬)"
+  },
+  "custom_font_notice": {
+    "message": "注意：這是進階設定，請輸入完整的 CSS font-family 值（包含備援字體與正確引號）。若使用本機未安裝的字體，瀏覽器會退回到備援字體。"
+  },
+  "ui_font_size_label": {
+    "message": "介面字體大小（UI）"
+  },
+  "item_font_size_label": {
+    "message": "條目字體大小（Item）"
+  },
+  "preview_label": {
+    "message": "預覽"
+  },
+  "preview_ui_sample": {
+    "message": "介面（UI）示例：中文 English 123 ABC"
+  },
+  "preview_item_sample": {
+    "message": "條目（Item）示例：我愛待辦事項 Todo List ✓"
+  },
+  "saving": {
+    "message": "儲存中..."
+  },
+  "save_action": {
+    "message": "儲存"
+  },
+  "reset_font_defaults": {
+    "message": "還原字體預設"
+  },
+  "settings_saved_toast": {
+    "message": "設定已儲存"
+  },
+  "select_list_placeholder": {
+    "message": "選擇清單..."
+  },
+  "search_lists_placeholder": {
+    "message": "搜尋清單..."
+  },
+  "tooltip_settings": {
+    "message": "設定"
+  },
+  "tooltip_open_side_panel": {
+    "message": "開啟側邊面板"
+  },
+  "tooltip_add_list": {
+    "message": "新增類別"
+  },
+  "tooltip_cancel": {
+    "message": "取消"
+  },
+  "tooltip_rename": {
+    "message": "重新命名"
+  },
+  "tooltip_delete_list": {
+    "message": "刪除類別"
+  },
+  "tooltip_cannot_delete_default_list": {
+    "message": "無法刪除預設類別"
+  },
+  "tooltip_delete_task": {
+    "message": "刪除任務"
+  },
+  "tooltip_expand_all": {
+    "message": "全部展開"
+  },
+  "tooltip_collapse_all": {
+    "message": "全部摺疊"
+  },
+  "tooltip_expand_sidebar": {
+    "message": "展開清單"
+  },
+  "tooltip_collapse_sidebar": {
+    "message": "收合清單"
+  },
+  "toast_fetch_error_title": {
+    "message": "讀取資料失敗"
+  },
+  "toast_mutation_error_title": {
+    "message": "操作失敗"
+  },
+  "notification_login_success_title": {
+    "message": "登入成功"
+  },
+  "notification_login_success_message_named": {
+    "message": "已成功登入 Microsoft 帳號：$1"
+  },
+  "notification_login_success_message_generic": {
+    "message": "已成功登入 Microsoft 帳號"
+  },
+  "notification_error_title": {
+    "message": "發生錯誤"
+  },
+  "toast_create_list_error_title": {
+    "message": "新增清單失敗"
+  },
+  "toast_delete_list_error_title": {
+    "message": "刪除清單失敗"
+  },
+  "toast_rename_list_error_title": {
+    "message": "重新命名清單失敗"
+  },
+  "toast_create_task_error_title": {
+    "message": "新增任務失敗"
+  },
+  "toast_update_task_error_title": {
+    "message": "更新任務失敗"
+  },
+  "toast_delete_task_error_title": {
+    "message": "刪除任務失敗"
+  },
+  "toast_add_file_attachment_error_title": {
+    "message": "新增附件失敗"
+  },
+  "toast_add_link_attachment_error_title": {
+    "message": "新增連結附件失敗"
+  },
+  "toast_delete_attachment_error_title": {
+    "message": "刪除附件失敗"
+  },
+  "toast_close_aria_label": {
+    "message": "關閉通知"
+  },
+  "toast_close_button": {
+    "message": "關閉"
+  }
 }

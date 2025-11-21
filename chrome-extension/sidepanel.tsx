@@ -29,7 +29,7 @@ function SidePanelShell() {
     const auth = useAuth()
     const { token, isLoggedIn } = auth
     const { data: msLists = [], isLoading: listsLoading } = useMsTodoLists(token)
-    const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("work")
+    const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
     const [sidebarOpen, setSidebarOpen] = React.useState<boolean>(false)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
     const { t } = useI18n()
@@ -91,7 +91,7 @@ function SidePanelShell() {
                 {sidebarOpen && (
                     <>
                         {/* Backdrop */}
-                        <div 
+                        <div
                             className="fixed inset-0 bg-black/20 z-40 backdrop-blur-sm"
                             onClick={() => setSidebarOpen(false)}
                         />
@@ -110,9 +110,9 @@ function SidePanelShell() {
                                     </Button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
-                                    <AppSidebar 
-                                        todoLists={msLists.map(l => ({ id: l.id, name: l.displayName, createdAt: Date.now() }))} 
-                                        selectedTodoListId={selectedTodoListId} 
+                                    <AppSidebar
+                                        todoLists={msLists.map(l => ({ id: l.id, name: l.displayName, createdAt: Date.now() }))}
+                                        selectedTodoListId={selectedTodoListId}
                                         onSelectTodoList={setSelectedTodoListId}
                                         isOverlay={true}
                                     />

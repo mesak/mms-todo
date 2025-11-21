@@ -13,12 +13,14 @@ import { useI18n } from "../lib/i18n"
 interface TodoTaskListProps {
   selectedTodoListId: string
   hideCompleted?: boolean
+  /** 過濾模式：all=顯示全部, incomplete=只顯示未完成, completed=只顯示已完成 */
+  filterMode?: "all" | "incomplete" | "completed"
   listLabel?: string
   iconOnlyActions?: boolean
   maxHeight?: string
 }
 
-export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
+export function TodoList({ selectedTodoListId, hideCompleted = false, filterMode = "all", listLabel, iconOnlyActions = false, maxHeight = "72vh" }: TodoTaskListProps) {
   const [title, setTitle] = React.useState("")
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set())
   const [globalExpanded, setGlobalExpanded] = React.useState(false)
@@ -54,8 +56,16 @@ export function TodoList({ selectedTodoListId, hideCompleted = false, listLabel,
   }, [])
 
   const visibleTodoTasks = React.useMemo(() => {
+    // 優先使用 filterMode，如果沒有則回退到 hideCompleted
+    if (filterMode !== "all") {
+      return todoTasks.filter((t) =>
+        filterMode === "incomplete"
+          ? t.status !== "completed"
+          : t.status === "completed"
+      )
+    }
     return hideCompleted ? todoTasks.filter((t) => t.status !== "completed") : todoTasks
-  }, [todoTasks, hideCompleted])
+  }, [todoTasks, hideCompleted, filterMode])
 
   // 全部展開/摺疊
   const toggleGlobalExpansion = React.useCallback(() => {

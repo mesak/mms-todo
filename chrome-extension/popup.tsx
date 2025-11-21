@@ -19,6 +19,7 @@ function PopupContent() {
     console.log("[popup] PopupContent rendered, isLoggedIn:", auth.isLoggedIn)
     const { isLoggedIn, token } = auth
     const [selectedTodoListId, setSelectedTodoListId] = React.useState<string>("")
+    const [taskFilter, setTaskFilter] = React.useState<"incomplete" | "completed">("incomplete")
     const { data: msLists = [] } = useMsTodoLists(token)
     const { fontFamily, uiFontSize, itemFontSize } = useSettings()
     const { t } = useI18n()
@@ -139,8 +140,41 @@ function PopupContent() {
                             </Tooltip>
                         </div>
                     </div>
+
+                    {/* 任務狀態標籤切換 */}
+                    <div className="flex items-center gap-2 border-b">
+                        <button
+                            onClick={() => setTaskFilter("incomplete")}
+                            className={`px-3 py-2 text-sm font-medium transition-colors relative ${taskFilter === "incomplete"
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
+                        >
+                            {t("incomplete_tasks")}
+                            {taskFilter === "incomplete" && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setTaskFilter("completed")}
+                            className={`px-3 py-2 text-sm font-medium transition-colors relative ${taskFilter === "completed"
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
+                        >
+                            {t("completed_tasks")}
+                            {taskFilter === "completed" && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                            )}
+                        </button>
+                    </div>
+
                     <div className="w-full max-w-full overflow-hidden">
-                        <TodoList selectedTodoListId={selectedTodoListId} hideCompleted listLabel={t("list_incomplete_tasks")} iconOnlyActions />
+                        <TodoList
+                            selectedTodoListId={selectedTodoListId}
+                            filterMode={taskFilter}
+                            iconOnlyActions
+                        />
                     </div>
                 </div>
             </AuthGate>
