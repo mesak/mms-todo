@@ -1,16 +1,18 @@
 # mms-todo（Chrome 擴充功能）
 
-一個簡潔的待辦清單 Chrome 擴充功能。支援類別管理、在 Popup 及 Side Panel 中操作待辦、以及簡單的設定頁。資料儲存在 `chrome.storage.local`，離線可用。
+一個簡潔的 Microsoft To Do Chrome 擴充功能。透過 Microsoft Graph API 同步待辦事項，支援在 Popup 及 Side Panel 中操作。
 
 > 本專案使用 Plasmo 搭建，採用 React 18 + TypeScript + Tailwind + Radix/shadcn 風格 UI，並以 TanStack React Query 管理資料快取。
 
 ## 功能特色
 - Popup、Side Panel、Options 三種介面
-- 類別管理：新增、重新命名、刪除（預設 `工作` 類別不可刪）
+- 透過 Microsoft Graph API 同步 Microsoft To Do 待辦事項
+- Microsoft 帳戶登入驗證（OAuth 2.0）
+- 待辦清單管理：檢視、切換清單
 - 待辦管理：新增、完成/取消完成、刪除
-- 以 `chrome.storage.local` 持久化，無需後端
 - React Query 快取與自動重新整理
 - Tailwind + shadcn 風格的現代 UI
+- 多語系支援（繁體中文、英文）
 
 ## 快速開始
 
@@ -33,21 +35,14 @@ pnpm dev
 
 ## Motion Effects
 
-This project uses Framer Motion to provide smooth UI animations:
+本專案使用 Framer Motion 提供流暢的 UI 動畫：
 
-- Todo items animate on add/remove (fade/slide + layout)
-- Completion toggle adds a subtle scale and strike-through transition
-- Side panel overlay fades in; panel slides in/out from the right
+- 待辦項目新增/移除時的淡入淡出與滑動效果
+- 完成切換時的縮放與刪除線過渡效果
 
-Where implemented:
+實現位置：
 
-- `ui/TodoList.tsx`: uses `AnimatePresence` and `motion.li` for list items
-- `sidepanel.tsx`: uses `AnimatePresence` and `motion.div` for overlay and panel
-
-Tuning or disabling:
-
-- To adjust stiffness/damping, edit the `transition` props in the files above
-- To disable animations, replace `motion.*` with their base elements and remove `AnimatePresence`
+- `ui/TodoList.tsx`：使用 `AnimatePresence` 和 `motion.li` 處理清單項目動畫
 ## 建置與封裝
 
 - 建置生產版：
@@ -64,15 +59,21 @@ pnpm package
 
 ## 專案結構
 
-- `popup.tsx`：Popup 入口（選類別、新增與檢視任務，並可打開 Side Panel）
-- `sidepanel.tsx`：Side Panel 入口（左側類別，右側待辦）
-- `options.tsx`：Options 設定頁（示範儲存 `settings.username`）
+- `popup.tsx`：Popup 入口（選清單、新增與檢視任務，並可打開 Side Panel）
+- `sidepanel.tsx`：Side Panel 入口（左側清單，右側待辦）
+- `options.tsx`：Options 設定頁
+- `background.ts`：背景服務（Token 刷新、通知、訊息轉發）
 - `providers.tsx`：React Query Provider 與全域 client 設定
-// 已移除：原本的 `hooks/useTodos.ts`（使用 chrome.storage.local）已被 Graph 版本取代。
+- `hooks/useAuth.ts`：Microsoft OAuth 驗證 Hook
+- `hooks/useMsTodos.ts`：Microsoft Graph To Do API Hook
+- `hooks/useSettings.ts`：設定管理 Hook
 - `ui/TodoList.tsx`：待辦清單 UI 與互動邏輯
-- `components/sidepanel/app-sidebar.tsx`：側邊欄（類別清單與操作）
+- `components/sidepanel/app-sidebar.tsx`：側邊欄（清單列表與操作）
 - `components/ui/*`：基礎 UI 元件（button、input、checkbox、tooltip、sidebar…）
-- `types/todo.ts`：`Category` 與 `Todo` 型別
+- `components/ui/auth-gate.tsx`：統一驗證元件
+- `lib/msgraph.ts`：Microsoft Graph API 封裝
+- `lib/i18n.ts`：多語系支援
+- `types/todo.ts`：`TodoList` 與 `TodoTask` 型別
 - `styles/globals.css`：Tailwind 變數與主題
 
 ## 重要設定
@@ -85,22 +86,19 @@ pnpm package
 - `tailwind.config.js`：掃描 `components`, `ui`, `hooks`, `lib` 與三個入口 (`popup|options|sidepanel`)。
 
 - MV3 權限（由 Plasmo 生成 manifest）：
-  - `storage`
-  - `host_permissions: ["https://*/*"]`
-  - `action.default_popup = popup.html`
-  - `side_panel.default_path = sidepanel.html`
-  - `options_ui.page = options.html`
+  - `identity`：Microsoft OAuth 驗證
+  - `storage`：本地資料快取
+  - `notifications`：登入成功通知
+  - `sidePanel`：Side Panel 功能
+  - `host_permissions`：Microsoft Graph API 與登入端點
 
-## 資料模型與儲存鍵
+## 資料來源
 
-- Category：`{ id, name, color?, createdAt }`
-- Todo：`{ id, title, completed, categoryId, createdAt }`
-- 預設類別：首次啟動若無類別，會建立 `{ id: "work", name: "工作" }`
-- chrome.storage.local：
-  - `categories: Category[]`
-  - `todos: Todo[]`
-  - `settings: { username }`
-  - `sidebarCollapsed: boolean`
+本擴充功能透過 Microsoft Graph API 存取 Microsoft To Do 資料：
+- 待辦清單（Task Lists）
+- 待辦任務（Tasks）
+
+需要 Microsoft 帳戶登入授權。
 
 ## 發佈到商店（CI）
 
@@ -124,10 +122,6 @@ pnpm package
 ## 版權與授權
 
 僅供學習與展示用途。如需商用請自行評估與調整授權。
-
----
-
-進階維護與擴充請參考 `AGENT.md`。
 
 ## Auth 統一驗證元件（AuthGate）
 
