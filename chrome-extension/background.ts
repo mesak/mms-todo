@@ -18,36 +18,65 @@ type AuthState = {
   refreshToken?: string
 }
 
-// ✅ 統一使用 localStorage（與 useAuth.ts 一致）
-function getAuthSync(): AuthState {
-  try {
-    const stored = localStorage.getItem(AUTH_KEY)
-    if (!stored) return {}
-    return JSON.parse(stored)
-  } catch {
-    return {}
-  }
-}
-
-function setAuthSync(state: AuthState): void {
-  try {
-    if (Object.keys(state).length === 0) {
-      localStorage.removeItem(AUTH_KEY)
-    } else {
-      localStorage.setItem(AUTH_KEY, JSON.stringify(state))
-    }
-  } catch (e) {
-    console.error("Failed to save auth to localStorage:", e)
-  }
-}
-
-// 保留異步版本以供相容
+// ✅ 關鍵改進: 使用 chrome.storage.local 替代 localStorage
+// Service Worker 中沒有 localStorage，必須使用 chrome.storage.local
 async function getAuth(): Promise<AuthState> {
-  return getAuthSync()
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get([AUTH_KEY], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn("[background] chrome.storage.local.get error:", chrome.runtime.lastError)
+          resolve({})
+          return
+        }
+        resolve(result[AUTH_KEY] || {})
+      })
+    } catch (e) {
+      console.warn("[background] Failed to get auth from chrome.storage.local:", e)
+      resolve({})
+    }
+  })
 }
 
 async function setAuth(state: AuthState): Promise<void> {
-  setAuthSync(state)
+  return new Promise((resolve) => {
+    try {
+      if (Object.keys(state).length === 0) {
+        chrome.storage.local.remove([AUTH_KEY], () => {
+          if (chrome.runtime.lastError) {
+            console.warn("[background] chrome.storage.local.remove error:", chrome.runtime.lastError)
+          }
+          resolve()
+        })
+      } else {
+        chrome.storage.local.set({ [AUTH_KEY]: state }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("[background] chrome.storage.local.set error:", chrome.runtime.lastError)
+          }
+          resolve()
+        })
+      }
+    } catch (e) {
+      console.warn("[background] Failed to set auth to chrome.storage.local:", e)
+      resolve()
+    }
+  })
+}
+
+async function clearAuth(): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.remove([AUTH_KEY], () => {
+        if (chrome.runtime.lastError) {
+          console.warn("[background] chrome.storage.local.remove error:", chrome.runtime.lastError)
+        }
+        resolve()
+      })
+    } catch (e) {
+      console.warn("[background] Failed to clear auth from chrome.storage.local:", e)
+      resolve()
+    }
+  })
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{
@@ -125,7 +154,22 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
-// Also refresh on extension startup
+// ✅ 關鍵改進: 多種方式確保 Service Worker 啟動時刷新 Token
+
+// 1. Extension 安裝或更新時
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("[background] Extension installed/updated, checking token...")
+  backgroundRefreshToken()
+})
+
+// 2. 瀏覽器啟動時
+chrome.runtime.onStartup.addListener(() => {
+  console.log("[background] Browser startup, checking token...")
+  backgroundRefreshToken()
+})
+
+// 3. Service Worker 激活時也檢查（每次 Service Worker 被喚醒）
+console.log("[background] Service worker activated, checking token...")
 backgroundRefreshToken()
 
 function createBasicNotification(title: string, message: string) {

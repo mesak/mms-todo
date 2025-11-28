@@ -13,40 +13,70 @@ type AuthState = {
     refreshToken?: string
 }
 
-// ✅ 改進 1: 使用 localStorage（同步、可靠）
-function getAuthSync(): AuthState {
-    const stored = localStorage.getItem(AUTH_KEY)
-    if (!stored) return {}
-    try {
-        return JSON.parse(stored)
-    } catch {
-        return {}
-    }
-}
+// ✅ 關鍵改進: 使用 chrome.storage.local 實現跨 Context 和重開機持久化
+// chrome.storage.local 在所有 Context (Popup, SidePanel, Background) 中共享
+// 並且在瀏覽器關閉後依然保留數據
 
-function setAuthSync(state: AuthState): void {
-    if (Object.keys(state).length === 0) {
-        localStorage.removeItem(AUTH_KEY)
-    } else {
-        localStorage.setItem(AUTH_KEY, JSON.stringify(state))
-    }
-}
-
-function clearAuthSync(): void {
-    localStorage.removeItem(AUTH_KEY)
-}
-
-// 保留異步版本以供舊代碼相容
+// 異步獲取認證狀態（主要使用）
 async function getAuth(): Promise<AuthState> {
-    return getAuthSync()
+    return new Promise((resolve) => {
+        try {
+            chrome.storage.local.get([AUTH_KEY], (result) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("[useAuth] chrome.storage.local.get error:", chrome.runtime.lastError)
+                    resolve({})
+                    return
+                }
+                resolve(result[AUTH_KEY] || {})
+            })
+        } catch (e) {
+            console.warn("[useAuth] Failed to get auth from chrome.storage.local:", e)
+            resolve({})
+        }
+    })
 }
 
+// 異步設置認證狀態
 async function setAuth(state: AuthState): Promise<void> {
-    setAuthSync(state)
+    return new Promise((resolve) => {
+        try {
+            if (Object.keys(state).length === 0) {
+                chrome.storage.local.remove([AUTH_KEY], () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn("[useAuth] chrome.storage.local.remove error:", chrome.runtime.lastError)
+                    }
+                    resolve()
+                })
+            } else {
+                chrome.storage.local.set({ [AUTH_KEY]: state }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn("[useAuth] chrome.storage.local.set error:", chrome.runtime.lastError)
+                    }
+                    resolve()
+                })
+            }
+        } catch (e) {
+            console.warn("[useAuth] Failed to set auth to chrome.storage.local:", e)
+            resolve()
+        }
+    })
 }
 
+// 異步清除認證狀態
 async function clearAuth(): Promise<void> {
-    clearAuthSync()
+    return new Promise((resolve) => {
+        try {
+            chrome.storage.local.remove([AUTH_KEY], () => {
+                if (chrome.runtime.lastError) {
+                    console.warn("[useAuth] chrome.storage.local.remove error:", chrome.runtime.lastError)
+                }
+                resolve()
+            })
+        } catch (e) {
+            console.warn("[useAuth] Failed to clear auth from chrome.storage.local:", e)
+            resolve()
+        }
+    })
 }
 
 function parseHashParams(hash: string): Record<string, string> {
@@ -58,50 +88,77 @@ function parseHashParams(hash: string): Record<string, string> {
 }
 
 export function useAuth() {
-    const [auth, setAuthState] = React.useState<AuthState>(() => {
-        // ✅ 改進: 同步初始化，無需等待 Promise
-        return getAuthSync()
-    })
-    const [isLoading, setIsLoading] = React.useState(false)  // ✅ 改進: 不再需要初始化加載
+    const [auth, setAuthState] = React.useState<AuthState>({})
+    const [isLoading, setIsLoading] = React.useState(true)  // ✅ 需要初始加載狀態
     type AuthPhase = "initializing" | "refreshing" | "ready" | "prompt" | "error"
     type AuthFlowStep = "checking-token" | "checking-refresh-token" | "exchanging-new-token" | "done" | "error"
-    const [phase, setPhase] = React.useState<AuthPhase>(() => {
-        // ✅ 改進: 同步判定初始階段
-        const a = getAuthSync()
-        const expired = a.expiresAt ? Date.now() >= a.expiresAt - 30_000 : true
-        const hasValid = !!a.accessToken && !expired
-        if (hasValid) return "ready"
-        if (!!a.refreshToken) return "refreshing"
-        return "prompt"
-    })
+    const [phase, setPhase] = React.useState<AuthPhase>("initializing")
     const [flowStep, setFlowStep] = React.useState<AuthFlowStep | undefined>(undefined)
 
-    // ✅ 改進 2: 監聽 localStorage 變化（來自其他 Context，也更新 phase）
+    // ✅ 關鍵改進: 從 chrome.storage.local 異步加載初始狀態
     React.useEffect(() => {
-        const handleStorageChange = (event: StorageEvent) => {
-            if (event.key === AUTH_KEY) {
-                try {
-                    const newAuth = event.newValue ? JSON.parse(event.newValue) : {}
-                    setAuthState(newAuth)
-
-                    // 同時更新 phase 和 flowStep
-                    if (newAuth?.accessToken) {
-                        const expired = newAuth.expiresAt ? Date.now() >= newAuth.expiresAt - 30_000 : true
-                        setPhase(expired ? "refreshing" : "ready")
-                    } else {
-                        setPhase("prompt")
-                    }
-                    setFlowStep(undefined)
-                } catch {
-                    setAuthState({})
+        let mounted = true
+        
+        async function loadInitialAuth() {
+            try {
+                const storedAuth = await getAuth()
+                if (!mounted) return
+                
+                setAuthState(storedAuth)
+                
+                // 判定初始階段
+                const expired = storedAuth.expiresAt ? Date.now() >= storedAuth.expiresAt - 30_000 : true
+                const hasValid = !!storedAuth.accessToken && !expired
+                
+                if (hasValid) {
+                    setPhase("ready")
+                } else if (storedAuth.refreshToken) {
+                    setPhase("refreshing")
+                } else {
                     setPhase("prompt")
-                    setFlowStep(undefined)
+                }
+            } catch (e) {
+                console.error("[useAuth] Failed to load initial auth:", e)
+                if (mounted) {
+                    setPhase("prompt")
+                }
+            } finally {
+                if (mounted) {
+                    setIsLoading(false)
                 }
             }
         }
+        
+        loadInitialAuth()
+        
+        return () => { mounted = false }
+    }, [])
 
-        window.addEventListener("storage", handleStorageChange)
-        return () => window.removeEventListener("storage", handleStorageChange)
+    // ✅ 關鍵改進: 監聽 chrome.storage.local 變化（跨 Context 同步）
+    React.useEffect(() => {
+        const handleStorageChange = (
+            changes: { [key: string]: chrome.storage.StorageChange },
+            areaName: string
+        ) => {
+            if (areaName !== "local") return
+            if (!changes[AUTH_KEY]) return
+            
+            const newAuth = changes[AUTH_KEY].newValue || {}
+            console.log("[useAuth] chrome.storage.local changed:", newAuth)
+            setAuthState(newAuth)
+
+            // 同時更新 phase 和 flowStep
+            if (newAuth?.accessToken) {
+                const expired = newAuth.expiresAt ? Date.now() >= newAuth.expiresAt - 30_000 : true
+                setPhase(expired ? "refreshing" : "ready")
+            } else {
+                setPhase("prompt")
+            }
+            setFlowStep(undefined)
+        }
+
+        chrome.storage.onChanged.addListener(handleStorageChange)
+        return () => chrome.storage.onChanged.removeListener(handleStorageChange)
     }, [])
 
     // ✅ 改進 2.5: 監聽其他擴展 Context 的消息（更新 auth_changed 和 logout_completed）
@@ -319,9 +376,9 @@ export function useAuth() {
             refreshToken: token.refresh_token,
             expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000
         }
-        // ✅ 改進 10: 登入後立即更新所有狀態和通知
+        // ✅ 登入後立即更新所有狀態和通知
         console.log("[useAuth] Login token exchange successful, updating state", { accessToken: next.accessToken?.substring(0, 10), expiresAt: next.expiresAt })
-        setAuthSync(next)
+        await setAuth(next)  // ✅ 使用異步版本
         setAuthState(next)
         console.log("[useAuth] Auth state updated, setting phase to ready")
         setPhase("ready")
@@ -355,20 +412,20 @@ export function useAuth() {
 
     const logout = React.useCallback(async () => {
         console.log("[useAuth] Logout started")
-        // ✅ 改進 7: 完整的登出流程（清除所有狀態）
+        // ✅ 完整的登出流程（清除所有狀態）
 
-        // 1. 清除 localStorage 中的所有認證相關數據
-        clearAuthSync()
+        // 1. 清除 localStorage 中的臨時數據
         localStorage.removeItem("login_state")
         localStorage.removeItem("ms_account")
 
         // 2. 清除 React Query 緩存（rq-mms-todo）
         localStorage.removeItem("rq-mms-todo")
 
-        // 3. 直接清除 chrome.storage.local（確保完全清除，不依賴訊息傳遞）
+        // 3. 清除 chrome.storage.local 中的認證和用戶數據
         try {
+            await clearAuth()  // ✅ 使用異步版本
             await new Promise<void>((resolve) => {
-                chrome.storage.local.remove(["auth.ms", "ms_account", "todos", "categories"], () => {
+                chrome.storage.local.remove(["ms_account", "todos", "categories"], () => {
                     console.log("[useAuth] Cleared chrome.storage.local directly")
                     resolve()
                 })
@@ -408,9 +465,9 @@ export function useAuth() {
         console.log("Logout completed: all state cleared")
     }, [])
 
-    // ✅ 改進 5: 更好的 ensureValidToken
+    // ✅ 更好的 ensureValidToken
     const ensureValidToken = React.useCallback(async (): Promise<string | undefined> => {
-        const current = getAuthSync()
+        const current = await getAuth()  // ✅ 使用異步版本
         const expired = current.expiresAt ? Date.now() >= current.expiresAt - 60_000 : true
 
         if (current.accessToken && !expired) {
@@ -425,7 +482,7 @@ export function useAuth() {
                     refreshToken: t.refresh_token ?? current.refreshToken,
                     expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000
                 }
-                setAuthSync(next)
+                await setAuth(next)  // ✅ 使用異步版本
                 setAuthState(next)
 
                 // 通知其他 Context
@@ -439,9 +496,9 @@ export function useAuth() {
                 return next.accessToken
             } catch (e) {
                 console.error("Failed to refresh token in ensureValidToken:", e)
-                // ✅ 改進: 只在 invalid_grant 時清除，其他錯誤返回 undefined（讓 caller 決定）
+                // ✅ 只在 invalid_grant 時清除，其他錯誤返回 undefined（讓 caller 決定）
                 if (e instanceof Error && e.message.includes("invalid_grant")) {
-                    clearAuthSync()
+                    await clearAuth()  // ✅ 使用異步版本
                     setAuthState({})
                     setPhase("prompt")
                 }
@@ -452,7 +509,7 @@ export function useAuth() {
         return undefined
     }, [])
 
-    // ✅ 改進 6: 改進的自動刷新邏輯，帶有更好的錯誤恢復
+    // ✅ 改進的自動刷新邏輯，帶有更好的錯誤恢復
     React.useEffect(() => {
         let cancelled = false
         let refreshTimer: NodeJS.Timeout | undefined
@@ -469,22 +526,22 @@ export function useAuth() {
                         refreshToken: t.refresh_token ?? auth.refreshToken,
                         expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000
                     }
-                    setAuthSync(next)
+                    await setAuth(next)  // ✅ 使用異步版本
                     setAuthState(next)
                     setPhase("ready")
                     setFlowStep("done")
                     setTimeout(() => setFlowStep(undefined), 600)
 
-                    // ✅ 改進: 計算下一次刷新時間
+                    // ✅ 計算下一次刷新時間
                     const timeUntilRefresh = Math.max(0, (t.expires_in - 300) * 1000)
                     refreshTimer = setTimeout(() => {
                         if (!cancelled) maybeRefresh()
                     }, timeUntilRefresh)
                 } catch (e) {
                     console.error("Token refresh failed:", e)
-                    // ✅ 改進: 只有真正的無效 Token 才清除，其他錯誤保持狀態
+                    // ✅ 只有真正的無效 Token 才清除，其他錯誤保持狀態
                     if (e instanceof Error && e.message.includes("invalid_grant")) {
-                        clearAuthSync()
+                        await clearAuth()  // ✅ 使用異步版本
                         setAuthState({})
                         setPhase("prompt")
                         setFlowStep("error")
